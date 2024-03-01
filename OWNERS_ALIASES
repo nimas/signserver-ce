@@ -1,0 +1,3 @@
+foreignAliases:
+- name: jx3-pipeline-catalog-keyfactor
+  org: devops

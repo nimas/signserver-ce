@@ -1,0 +1,10 @@
+version: 1
+type: maven
+resolver:
+  serverId: keyfactor
+  snapshotRepo: dev-maven
+  releaseRepo: dev-maven
+deployer:
+  serverId: keyfactor
+  snapshotRepo: dev-maven
+  releaseRepo: dev-maven

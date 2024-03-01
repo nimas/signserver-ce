@@ -1,0 +1,40 @@
+environments:
+  default:
+    values:
+    - jx-values.yaml
+repositories:
+- name: jx3
+  url: https://jenkins-x-charts.github.io/repo
+- name: devops
+  url: git+https://neo.repoman.primekey.com/devops/jx3@charts?ref=main
+
+---
+releases:
+- chart: jx3/jx-verify
+  name: jx-verify
+  namespace: '{{ requiredEnv "PREVIEW_NAMESPACE" }}'
+- chart: devops/permissions
+  name: permissions
+  namespace: '{{ requiredEnv "PREVIEW_NAMESPACE" }}'
+  values:
+  - permissions.yaml.gotmpl
+- chart: '../charts/{{ requiredEnv "APP_NAME" }}'
+  name: preview
+  wait: true
+  createNamespace: true
+  namespace: '{{ requiredEnv "PREVIEW_NAMESPACE" }}'
+  values:
+  - jx-values.yaml
+  - values.yaml.gotmpl
+  hooks:
+  - events: ["presync"]
+    showlogs: true
+    command: "jx"
+    args:
+    - secret
+    - copy
+    - --create-namespace
+    - --selector
+    - "secret.jenkins-x.io/replica-source=true"
+    - --to
+    - '{{ requiredEnv "PREVIEW_NAMESPACE" }}'

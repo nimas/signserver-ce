@@ -1,0 +1,14 @@
+imagePullSecrets:
+{{ .Values.jx.imagePullSecrets | toYaml }}
+
+image:
+  tag: "{{ requiredEnv "VERSION" }}"
+  pullPolicy: Always
+
+ingress:
+  enabled: true
+  hosts:
+  - host: "signserver-{{ requiredEnv "PREVIEW_NAMESPACE" }}.k8s.primetest.se"
+    paths:
+    - path: /
+      pathType: Prefix

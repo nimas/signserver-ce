@@ -1,0 +1,21 @@
+            <logger category="org.signserver" use-parent-handlers="false">
+                <level name="${env.LOG_LEVEL_APP:INFO}"/>
+                <handlers>
+                    <handler name="CONSOLE"/>
+                    <handler name="FILE"/>
+                </handlers>
+            </logger>
+            <logger category="org.cesecore" use-parent-handlers="false">
+                <level name="${env.LOG_LEVEL_APP:INFO}"/>
+                <handlers>
+                    <handler name="CONSOLE"/>
+                    <handler name="FILE"/>
+                </handlers>
+            </logger>
+            <logger category="com.keyfactor" use-parent-handlers="false">
+                <level name="${env.LOG_LEVEL_APP:INFO}"/>
+                <handlers>
+                    <handler name="CONSOLE"/>
+                    <handler name="FILE"/>
+                </handlers>
+            </logger>

@@ -1,0 +1,6 @@
+namespace: '{{ requiredEnv "PREVIEW_NAMESPACE" }}'
+roleBindingName: devs
+roleName: devs
+subjects:
+- kind: Group
+  name: '{{ requiredEnv "DOCKER_REGISTRY_ORG" }}'

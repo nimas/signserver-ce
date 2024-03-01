@@ -1,0 +1,19 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: pullrequest
+spec:
+  pipelineSpec:
+    tasks:
+    - name: pr
+      taskSpec:
+        stepTemplate:
+          name: ""
+          env:
+          - name: ENFORCE_CONVENTIONAL_COMMITS
+            value: "false"
+        steps:
+        - image: uses:lighthouse:devops/jx3-pipeline-catalog-keyfactor/tasks/docker-helm/pullrequest.yaml@main
+          name: ""
+  serviceAccountName: tekton-bot
+  timeout: 15m
