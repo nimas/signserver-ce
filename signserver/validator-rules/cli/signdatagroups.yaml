@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=../schema/catalog.schema.json#/$defs/cliFile
+command: signdatagroups
+description: "Request MRTD data groups to be signed (SignDataGroupsCommand)"
+targetKinds: [sod]
+workerOptions: [workername, workerid]
+optionGroups: [keystore-options]
+options:
+  workername: { arg: true, type: workerName }
+  workerid: { arg: true, type: positiveInteger }
+  data: { arg: true, description: "Data groups, e.g. 1=value1&2=value2" }
+  encoding: { arg: true, type: string, allowedValues: [none, base64], caseSensitive: false }
+  host: { arg: true }
+  port: { arg: true, type: positiveInteger }
+  servlet: { arg: true, default: "/signserver/sod" }
+  protocol:
+    arg: true
+    type: string
+    allowedValues: [HTTP, CLIENTWS]
+    caseSensitive: true
+    default: HTTP
+  username: { arg: true }
+  password: { arg: true, sensitive: true }
+  repeat: { arg: true, type: positiveInteger }
+  metadata: { arg: true, repeatable: true, type: keyValue }
+rules:
+  - id: SDG-WORKER-1
+    require: { any: [ { cli.hasOption: workername }, { cli.hasOption: workerid } ] }
+    severity: ERROR
+    option: workername
+    message: "Must specify -workername or -workerid"
+  - id: SDG-DATA-1
+    require: { cli.hasOption: data }
+    severity: ERROR
+    option: data
+    message: "Missing -data"
+extraction:
+  sources:
+    - modules/SignServer-Client-CLI/src/main/java/org/signserver/client/cli/defaultimpl/SignDataGroupsCommand.java

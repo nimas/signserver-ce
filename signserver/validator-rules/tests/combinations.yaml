@@ -1,0 +1,102 @@
+# yaml-language-server: $schema=../schema/catalog.schema.json#/$defs/testFile
+tests:
+  - name: clientside-against-cms-without-clientsidehashing
+    config:
+      NAME: CMSSigner
+      TYPE: PROCESSABLE
+      IMPLEMENTATION_CLASS: org.signserver.module.cmssigner.CMSSigner
+      AUTHTYPE: NOAUTH
+      CRYPTOTOKEN: CryptoTokenP12
+      DEFAULTKEY: signer00003
+      ACCEPTED_HASH_DIGEST_ALGORITHMS: SHA-256,SHA-384,SHA-512
+    cli: "signclient signdocument -workername CMSSigner -infile a.txt -outfile a.p7s -clientside -digestalgorithm SHA-256"
+    expectPassed: false
+    expectCodes: ["RULE_COMBO-CSH-2:clientside"]
+
+  - name: clientside-against-cms-with-clientsidehashing-passes
+    extends: clientside-against-cms-without-clientsidehashing
+    config:
+      CLIENTSIDEHASHING: "TRUE"
+    cli: "signclient signdocument -workername CMSSigner -infile a.txt -outfile a.p7s -clientside -digestalgorithm SHA256"
+    expectPassed: true
+
+  - name: clientside-digest-not-accepted
+    extends: clientside-against-cms-without-clientsidehashing
+    config:
+      CLIENTSIDEHASHING: "TRUE"
+      ACCEPTED_HASH_DIGEST_ALGORITHMS: SHA-384,SHA-512
+    cli: "signclient signdocument -workername CMSSigner -infile a.txt -outfile a.p7s -clientside -digestalgorithm SHA-256"
+    expectPassed: false
+    expectCodes: ["RULE_COMBO-CSH-3:digestalgorithm"]
+
+  - name: serverside-against-clientside-only-worker
+    extends: clientside-against-cms-without-clientsidehashing
+    config:
+      CLIENTSIDEHASHING: "TRUE"
+    cli: "signclient signdocument -workername CMSSigner -infile a.txt -outfile a.p7s"
+    expectPassed: false
+    expectCodes: ["RULE_COMBO-CSH-4:clientside"]
+
+  - name: clientside-against-pdfsigner
+    config:
+      NAME: PDFSigner
+      TYPE: PROCESSABLE
+      IMPLEMENTATION_CLASS: org.signserver.module.pdfsigner.PDFSigner
+      CRYPTOTOKEN: CryptoTokenP12
+      DEFAULTKEY: signer00003
+    cli: "signclient signdocument -workername PDFSigner -infile a.pdf -outfile b.pdf -clientside -digestalgorithm SHA-256"
+    expectPassed: false
+    expectCodes: ["RULE_COMBO-CSH-1:clientside"]
+
+  - name: pdf-metadata-override-not-allowed
+    config:
+      NAME: PDFSigner
+      TYPE: PROCESSABLE
+      IMPLEMENTATION_CLASS: org.signserver.module.pdfsigner.PDFSigner
+      CRYPTOTOKEN: CryptoTokenP12
+      DEFAULTKEY: signer00003
+      ALLOW_PROPERTY_OVERRIDE: REASON
+    cli: "signclient signdocument -workername PDFSigner -infile a.pdf -outfile b.pdf -metadata REASON=ok -metadata LOCATION=Stockholm"
+    expectPassed: false
+    expectCodes: ["META_OVERRIDE_NOT_ALLOWED:metadata"]
+
+  - name: pdf-metadata-unknown-key
+    extends: pdf-metadata-override-not-allowed
+    cli: "signclient signdocument -workername PDFSigner -infile a.pdf -outfile b.pdf -metadata VISIBLE_SIGNATURE_CUSTOM_IMAGE_PATH=/tmp/x.png"
+    expectPassed: true
+    expectCodes: ["META_UNKNOWN:metadata"]
+
+  - name: cms-detached-override
+    extends: clientside-against-cms-without-clientsidehashing
+    cli: "signclient signdocument -workername CMSSigner -data hello -metadata DETACHEDSIGNATURE=TRUE"
+    expectPassed: false
+    expectCodes: ["META_OVERRIDE_NOT_ALLOWED:metadata"]
+
+  - name: validatedocument-against-signer
+    extends: clientside-against-cms-without-clientsidehashing
+    cli: "signclient validatedocument -workername CMSSigner -data hello"
+    expectPassed: false
+    expectCodes: ["COMBO_WRONG_WORKER_KIND"]
+
+  - name: target-mismatch
+    extends: clientside-against-cms-without-clientsidehashing
+    cli: "signclient signdocument -workername OtherSigner -data hello"
+    expectPassed: true
+    expectCodes: ["COMBO_TARGET_MISMATCH:workername"]
+
+  - name: username-authorizer-without-username
+    extends: clientside-against-cms-without-clientsidehashing
+    config:
+      AUTHTYPE: org.signserver.server.UsernamePasswordAuthorizer
+      USER.ALICE: secret
+    cli: "signclient signdocument -workername CMSSigner -data hello"
+    expectPassed: true
+    expectCodes: ["RULE_COMBO-AUTH-1:username"]
+
+  - name: disabled-worker
+    extends: clientside-against-cms-without-clientsidehashing
+    config:
+      DISABLED: "TRUE"
+    cli: "signclient signdocument -workername CMSSigner -data hello"
+    expectPassed: false
+    expectCodes: ["RULE_COMBO-DISABLED-1"]

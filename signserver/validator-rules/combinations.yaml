@@ -1,0 +1,81 @@
+# yaml-language-server: $schema=../schema/catalog.schema.json#/$defs/combinationsFile
+#
+# Rules that need BOTH a signclient command and the target worker configuration.
+# Built-in combination checks (no rule needed):
+#   COMBO_WRONG_WORKER_KIND    - command targetKinds vs worker kind (cli/*.yaml)
+#   COMBO_TARGET_MISMATCH      - -workername/-workerid differs from the validated worker
+#   META_UNKNOWN / META_OVERRIDE_NOT_ALLOWED / META_VALUE_INVALID
+#                              - -metadata entries vs the worker's requestMetadata
+rules:
+  - id: COMBO-CSH-1
+    description: "Client-side hashing must be supported by the worker type"
+    when: { cli.hasOption: clientside }
+    require: { worker.hasCapability: clientSideHashing }
+    severity: ERROR
+    option: clientside
+    message: "-clientside is used but ${worker} does not support client-side hashing"
+    suggestion: "Use a CMSSigner or PlainSigner with CLIENTSIDEHASHING=TRUE, or drop -clientside"
+  - id: COMBO-CSH-2
+    description: "Client-side hashing must be enabled on the worker"
+    when: { all: [ { cli.hasOption: clientside }, { worker.hasCapability: clientSideHashing } ] }
+    require: { anyTrue: [CLIENTSIDEHASHING, ALLOW_CLIENTSIDEHASHING_OVERRIDE] }
+    severity: ERROR
+    option: clientside
+    property: CLIENTSIDEHASHING
+    message: "-clientside is used but the worker has neither CLIENTSIDEHASHING=TRUE nor ALLOW_CLIENTSIDEHASHING_OVERRIDE=TRUE"
+    suggestion: "Set CLIENTSIDEHASHING=TRUE (or ALLOW_CLIENTSIDEHASHING_OVERRIDE=TRUE) on the worker"
+    source: "ClientSideHashingHelper.shouldUseClientSideHashing: Client-side hashing requested but not allowed"
+  - id: COMBO-CSH-3
+    description: "The digest algorithm must be accepted by the worker"
+    when: { all: [ { cli.hasOption: clientside }, { cli.hasOption: digestalgorithm }, { present: ACCEPTED_HASH_DIGEST_ALGORITHMS } ] }
+    require:
+      cli.optionValueInList: { option: digestalgorithm, property: ACCEPTED_HASH_DIGEST_ALGORITHMS, normalize: digest }
+    severity: ERROR
+    option: digestalgorithm
+    property: ACCEPTED_HASH_DIGEST_ALGORITHMS
+    message: "-digestalgorithm ${cli:digestalgorithm} is not in the worker's ACCEPTED_HASH_DIGEST_ALGORITHMS (${ACCEPTED_HASH_DIGEST_ALGORITHMS})"
+  - id: COMBO-CSH-4
+    description: "A worker requiring client-side hashing refuses server-side hashing"
+    when:
+      all:
+        - worker.hasCapability: clientSideHashing
+        - cli.command: signdocument
+        - isTrue: CLIENTSIDEHASHING
+        - not: { isTrue: ALLOW_CLIENTSIDEHASHING_OVERRIDE }
+    require: { cli.hasOption: clientside }
+    severity: ERROR
+    option: clientside
+    property: CLIENTSIDEHASHING
+    message: "The worker requires client-side hashing (CLIENTSIDEHASHING=TRUE) but -clientside is not used"
+    suggestion: "Add -clientside -digestalgorithm SHA-256, or set ALLOW_CLIENTSIDEHASHING_OVERRIDE=TRUE"
+    source: "ClientSideHashingHelper.shouldUseClientSideHashing: Server-side hashing requested but not allowed"
+  - id: COMBO-AUTH-1
+    when: { matches: { AUTHTYPE: ".*Username.*Authorizer" } }
+    require: { cli.hasOption: username }
+    severity: WARNING
+    option: username
+    property: AUTHTYPE
+    message: "The worker uses ${AUTHTYPE} but no -username is given"
+  - id: COMBO-AUTH-2
+    when: { equals: { AUTHTYPE: CLIENTCERT } }
+    require: { cli.hasOption: keystore }
+    severity: WARNING
+    option: keystore
+    property: AUTHTYPE
+    message: "The worker requires a client certificate (AUTHTYPE=CLIENTCERT) but no -keystore is given"
+  - id: COMBO-AUTH-3
+    when: { all: [ { equals: { AUTHTYPE: CLIENTCERT } }, { cli.hasOption: nohttps } ] }
+    severity: ERROR
+    option: nohttps
+    property: AUTHTYPE
+    message: "AUTHTYPE=CLIENTCERT requires HTTPS but -nohttps is given"
+  - id: COMBO-DISABLED-1
+    when: { isTrue: DISABLED }
+    severity: ERROR
+    property: DISABLED
+    message: "The worker is disabled (DISABLED=TRUE); the request will be refused"
+  - id: COMBO-PDF-1
+    when: { all: [ { cli.hasOption: pdfpassword }, { not: { worker.is: PDFSigner } } ] }
+    severity: WARNING
+    option: pdfpassword
+    message: "-pdfpassword is only used by PDFSigner, not by ${worker}"

@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=../schema/catalog.schema.json#/$defs/groupFile
+#
+# Properties shared by all crypto token implementations (CryptoTokenHelper).
+group: crypto-token
+description: "Properties common to crypto tokens"
+properties:
+  DEFAULTKEY:
+    type: string
+    source: "CryptoTokenHelper.PROPERTY_DEFAULTKEY"
+  NEXTCERTSIGNKEY:
+    type: string
+    source: "CryptoTokenHelper.PROPERTY_NEXTCERTSIGNKEY"
+  PIN:
+    type: string
+    sensitive: true
+    description: "Activation code for the token (auto-activation)"
+    source: "CryptoTokenHelper.PROPERTY_PIN"
+  AUTHCODE:
+    type: string
+    sensitive: true
+    source: "CryptoTokenHelper.PROPERTY_AUTHCODE"
+  SIGNATUREALGORITHM:
+    type: signatureAlgorithm
+    description: "Signature algorithm used for certificate requests and self-signed certificates"
+    source: "KeystoreCryptoToken: PROPERTY_SIGNATUREALGORITHM"
+  KEYGENERATIONLIMIT:
+    type: nonNegativeInteger
+    source: "CryptoTokenHelper.PROPERTY_KEYGENERATIONLIMIT"
+  SELFSIGNED_DN:
+    type: string
+    source: "CryptoTokenHelper.PROPERTY_SELFSIGNED_DN"
+  SELFSIGNED_VALIDITY:
+    type: positiveInteger
+    description: "Validity of generated self-signed certificates, in seconds"
+    source: "CryptoTokenHelper.PROPERTY_SELFSIGNED_VALIDITY"
+  SELFSIGNED_SIGNATUREALGORITHM:
+    type: signatureAlgorithm
+    source: "CryptoTokenHelper.PROPERTY_SELFSIGNED_SIGNATUREALGORITHM"
+  KEYALG: { type: string, source: "CryptoTokenHelper: KEYALG" }
+  KEYSPEC: { type: string, source: "CryptoTokenHelper: KEYSPEC" }
+  TESTKEY: { type: string, source: "CryptoTokenHelper: TESTKEY" }

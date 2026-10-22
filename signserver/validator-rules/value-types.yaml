@@ -1,0 +1,86 @@
+# yaml-language-server: $schema=schema/catalog.schema.json#/$defs/valueTypesFile
+#
+# Reusable value types referenced by "type:" in worker properties and CLI options.
+#
+# Supported kinds (implemented by the engine, closed set):
+#   enum                values, caseInsensitive (default true)
+#   integer             min, max
+#   string              any value
+#   regex               pattern (full match)
+#   url                 absolute http(s) URL
+#   path                non-blank file system path
+#   list                of (type name), separator (default ",")
+#   oneOf               types (list of type names), valid if any matches
+#   digestAlgorithm     checked with BouncyCastle (e.g. SHA256, SHA-256)
+#   signatureAlgorithm  checked with BouncyCastle (e.g. SHA256withRSA)
+types:
+  string:
+    kind: string
+  boolean:
+    kind: enum
+    values: ["TRUE", "FALSE"]
+    description: "TRUE or FALSE (case-insensitive)"
+  integer:
+    kind: integer
+  nonNegativeInteger:
+    kind: integer
+    min: 0
+  positiveInteger:
+    kind: integer
+    min: 1
+  keyUsageLimit:
+    kind: integer
+    min: -1
+    description: "number of signings allowed, -1 for unlimited"
+  className:
+    kind: regex
+    pattern: "[A-Za-z_$][\\w$]*(\\.[A-Za-z_$][\\w$]*)+"
+    description: "a fully qualified Java class name"
+  oid:
+    kind: regex
+    pattern: "[0-2](\\.\\d+)+"
+    description: "an object identifier, e.g. 1.2.840.113549.1.7.1"
+  url:
+    kind: url
+  path:
+    kind: path
+  workerName:
+    kind: regex
+    pattern: "[A-Za-z0-9_.\\-]+"
+    description: "a worker name"
+  workerIdOrName:
+    kind: regex
+    pattern: "[A-Za-z0-9_.\\-]+"
+    description: "a worker ID or name"
+  digestAlgorithm:
+    kind: digestAlgorithm
+    description: "a digest algorithm, e.g. SHA256, SHA-256, SHA384, SHA512"
+  digestAlgorithmList:
+    kind: list
+    of: digestAlgorithm
+    separator: ","
+    description: "comma-separated digest algorithms, e.g. SHA-256,SHA-384,SHA-512"
+  signatureAlgorithm:
+    kind: signatureAlgorithm
+    description: "a signature algorithm, e.g. SHA256withRSA, SHA256withECDSA, Ed25519"
+  workerType:
+    kind: enum
+    values: [PROCESSABLE, TIMED_SERVICE, SPECIAL, CRYPTO_WORKER]
+    caseInsensitive: false
+    description: "PROCESSABLE, TIMED_SERVICE, SPECIAL or CRYPTO_WORKER (case-sensitive)"
+  authTypeKeyword:
+    kind: enum
+    values: [NOAUTH, CLIENTCERT]
+    caseInsensitive: false
+  authType:
+    kind: oneOf
+    types: [authTypeKeyword, className]
+    description: "NOAUTH, CLIENTCERT or the class name of an authorizer"
+  keyValue:
+    kind: regex
+    pattern: "[^=]+=.*"
+    description: "KEY=VALUE"
+  hostList:
+    kind: regex
+    pattern: "[^,\\s]+(\\s*,\\s*[^,\\s]+)*"
+    description: "comma-separated host names"

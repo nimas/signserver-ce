@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=../schema/catalog.schema.json#/$defs/cliFile
+command: timestamp
+description: "Send time-stamp requests to a TSA (TimeStampCommand)"
+targetKinds: [timestamp]
+optionGroups: [keystore-options]
+options:
+  help: { arg: false }
+  verify: { arg: false }
+  print: { arg: false }
+  url: { arg: true, type: url, description: "URL of the TSA, e.g. http://localhost:8080/signserver/tsa?workerName=TimeStampSigner" }
+  outrep: { arg: true, type: path }
+  inrep: { arg: true, type: path }
+  signerfile: { arg: true, type: path }
+  cafile: { arg: true, type: path }
+  outreq: { arg: true, type: path }
+  base64: { arg: false }
+  infile: { arg: true, type: path }
+  instr: { arg: true }
+  inreq: { arg: true, type: path }
+  sleep: { arg: true, type: nonNegativeInteger }
+  certreq: { arg: false }
+  reqpolicy: { arg: true, type: oid }
+  digestalgorithm: { arg: true, type: digestAlgorithm }
+rules:
+  - id: TS-URL-1
+    when: { not: { any: [ { cli.hasOption: verify }, { cli.hasOption: print }, { cli.hasOption: help } ] } }
+    require: { cli.hasOption: url }
+    severity: ERROR
+    option: url
+    message: "Missing -url of the TSA"
+  - id: TS-VERIFY-1
+    when: { cli.hasOption: verify }
+    require: { all: [ { cli.hasOption: inrep }, { any: [ { cli.hasOption: cafile }, { cli.hasOption: signerfile } ] } ] }
+    severity: ERROR
+    option: verify
+    message: "-verify needs -inrep and -signerfile or -cafile"
+  - id: TS-INPUT-1
+    require: { atMostOne: [ { cli.hasOption: infile }, { cli.hasOption: instr }, { cli.hasOption: inreq } ] }
+    severity: ERROR
+    option: infile
+    message: "Specify at most one of -infile, -instr or -inreq"
+extraction:
+  sources:
+    - modules/SignServer-Client-CLI/src/main/java/org/signserver/client/cli/defaultimpl/TimeStampCommand.java

@@ -62,6 +62,8 @@
         <module>SignServer-Client-SigningAndValidationAPI</module>
         <module>SignServer-Client-ValidationCLI</module>
         <module>SignServer-REST-web</module>
+        <module>SignServer-Validator-Core</module>
+        <module>SignServer-Validator-CLI</module>
 
         <!-- Modules -->
         <module>SignServer-Module-Log4j</module>

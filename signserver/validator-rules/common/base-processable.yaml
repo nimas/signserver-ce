@@ -1,0 +1,58 @@
+# yaml-language-server: $schema=../schema/catalog.schema.json#/$defs/groupFile
+#
+# Properties of all processable workers (BaseProcessable): key selection and
+# the reference to the crypto token holding the keys.
+group: base-processable
+description: "Properties common to processable workers"
+properties:
+  CRYPTOTOKEN:
+    type: workerIdOrName
+    description: "Name or ID of the crypto worker holding the signing key"
+    source: "CryptoTokenHelper.PROPERTY_CRYPTOTOKEN / WorkerFactory"
+  DEFAULTKEY:
+    type: string
+    description: "Alias of the key to use in the crypto token"
+    source: "CryptoTokenHelper.PROPERTY_DEFAULTKEY"
+  NEXTCERTSIGNKEY:
+    type: string
+    description: "Alias of the next key (used during key renewal)"
+    source: "CryptoTokenHelper.PROPERTY_NEXTCERTSIGNKEY"
+  ALIASSELECTOR:
+    type: className
+    source: "WorkerConfig.PROPERTY_ALIASSELECTOR"
+  CACHE_PRIVATEKEY:
+    type: boolean
+    default: "TRUE"
+    source: "BaseProcessable.PROPERTY_CACHE_PRIVATEKEY"
+conditionalInherits:
+  - when: { present: CRYPTOTOKEN_IMPLEMENTATION_CLASS }
+    groups: [crypto-token]
+  - when:
+      equals: { CRYPTOTOKEN_IMPLEMENTATION_CLASS: org.signserver.server.cryptotokens.KeystoreCryptoToken }
+    groups: [keystore-crypto-token]
+rules:
+  - id: BP-TOKEN-1
+    description: "A processable worker needs a key: either a crypto worker reference or an in-worker crypto token"
+    require:
+      any:
+        - present: CRYPTOTOKEN
+        - present: CRYPTOTOKEN_IMPLEMENTATION_CLASS
+    severity: ERROR
+    property: CRYPTOTOKEN
+    message: "No crypto token configured: set CRYPTOTOKEN to the name of a crypto worker"
+  - id: BP-TOKEN-2
+    description: "CRYPTOTOKEN must reference an existing crypto worker"
+    when: { present: CRYPTOTOKEN }
+    require:
+      directory.workerKind: { property: CRYPTOTOKEN, kind: crypto }
+    severity: ERROR
+    property: CRYPTOTOKEN
+    message: "CRYPTOTOKEN '${CRYPTOTOKEN}' does not reference an existing crypto worker"
+    suggestion: "Create a crypto worker named '${CRYPTOTOKEN}' (TYPE=CRYPTO_WORKER) or fix the name"
+  - id: BP-KEY-1
+    description: "A signer should name the key to use"
+    when: { present: CRYPTOTOKEN }
+    require: { present: DEFAULTKEY }
+    severity: WARNING
+    property: DEFAULTKEY
+    message: "DEFAULTKEY is not set; the worker cannot select a signing key unless an ALIASSELECTOR is used"

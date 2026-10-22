@@ -1,0 +1,67 @@
+# yaml-language-server: $schema=../schema/catalog.schema.json#/$defs/testFile
+#
+# Golden cases: known-good configurations must pass.
+# expectCodes / forbidCodes entries are "CODE" or "CODE:PROPERTY-or-OPTION".
+tests:
+  - name: cmssigner-minimal-passes
+    config:
+      NAME: CMSSigner
+      TYPE: PROCESSABLE
+      IMPLEMENTATION_CLASS: org.signserver.module.cmssigner.CMSSigner
+      AUTHTYPE: NOAUTH
+      CRYPTOTOKEN: CryptoTokenP12
+      DEFAULTKEY: signer00003
+      DETACHEDSIGNATURE: "FALSE"
+      ACCEPTED_HASH_DIGEST_ALGORITHMS: SHA-256,SHA-384,SHA-512
+      SIGNATUREALGORITHM: ""
+      DISABLEKEYUSAGECOUNTER: "true"
+    otherWorkers:
+      - NAME: CryptoTokenP12
+        TYPE: CRYPTO_WORKER
+        IMPLEMENTATION_CLASS: org.signserver.server.signers.CryptoWorker
+        CRYPTOTOKEN_IMPLEMENTATION_CLASS: org.signserver.server.cryptotokens.KeystoreCryptoToken
+        KEYSTORETYPE: PKCS12
+        KEYSTOREPATH: /opt/signserver/res/test/dss10/dss10_keystore.p12
+    expectPassed: true
+    forbidCodes: [PROP_UNKNOWN, PROP_WRONG_WORKER, VALUE_INVALID, NOT_VERIFIED]
+
+  - name: keystore-crypto-worker-passes
+    config:
+      NAME: CryptoTokenP12
+      TYPE: CRYPTO_WORKER
+      IMPLEMENTATION_CLASS: org.signserver.server.signers.CryptoWorker
+      CRYPTOTOKEN_IMPLEMENTATION_CLASS: org.signserver.server.cryptotokens.KeystoreCryptoToken
+      KEYSTORETYPE: PKCS12
+      KEYSTOREPATH: /opt/signserver/res/test/dss10/dss10_keystore.p12
+      KEYSTOREPASSWORD: foo123
+    expectPassed: true
+    forbidCodes: [PROP_UNKNOWN, PROP_WRONG_WORKER]
+
+  - name: pdfsigner-visible-signature-passes
+    config:
+      NAME: PDFSigner
+      TYPE: PROCESSABLE
+      IMPLEMENTATION_CLASS: org.signserver.module.pdfsigner.PDFSigner
+      AUTHTYPE: NOAUTH
+      CRYPTOTOKEN: CryptoTokenP12
+      DEFAULTKEY: signer00003
+      DIGESTALGORITHM: SHA256
+      ADD_VISIBLE_SIGNATURE: "True"
+      VISIBLE_SIGNATURE_PAGE: "2"
+      CERTIFICATION_LEVEL: FORM_FILLING
+      SET_PERMISSIONS: ALLOW_PRINTING,ALLOW_COPY
+    expectPassed: true
+    forbidCodes: [PROP_UNKNOWN, PROP_WRONG_WORKER, VALUE_INVALID]
+
+  - name: plainsigner-passes
+    config:
+      NAME: PlainSigner
+      TYPE: PROCESSABLE
+      IMPLEMENTATION_CLASS: org.signserver.module.cmssigner.PlainSigner
+      AUTHTYPE: NOAUTH
+      CRYPTOTOKEN: CryptoTokenP12
+      DEFAULTKEY: signer00003
+      SIGNATUREALGORITHM: SHA256withRSA
+      ACCEPTED_HASH_DIGEST_ALGORITHMS: SHA-256,SHA-384,SHA-512
+    expectPassed: true
+    forbidCodes: [PROP_UNKNOWN, PROP_WRONG_WORKER, VALUE_INVALID]

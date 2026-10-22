@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=../schema/catalog.schema.json#/$defs/groupFile
+#
+# Client-side hashing support (ClientSideHashingHelper), used by CMSSigner and
+# PlainSigner.
+group: client-side-hashing
+description: "Client-side hashing properties"
+properties:
+  CLIENTSIDEHASHING:
+    type: boolean
+    default: "FALSE"
+    description: "If TRUE the worker only accepts pre-hashed (client-side hashed) data"
+    source: "ClientSideHashingHelper.CLIENTSIDEHASHING"
+  ALLOW_CLIENTSIDEHASHING_OVERRIDE:
+    type: boolean
+    default: "FALSE"
+    description: "If TRUE the client may choose client-side or server-side hashing per request"
+    source: "ClientSideHashingHelper.ALLOW_CLIENTSIDEHASHING_OVERRIDE"
+  ACCEPTED_HASH_DIGEST_ALGORITHMS:
+    type: digestAlgorithmList
+    description: "Digest algorithms accepted for client-side hashing"
+    source: "ClientSideHashingHelper.ACCEPTED_HASHDIGEST_ALGORITHMS"
+rules:
+  - id: CSH-1
+    when: { anyTrue: [CLIENTSIDEHASHING, ALLOW_CLIENTSIDEHASHING_OVERRIDE] }
+    require: { present: ACCEPTED_HASH_DIGEST_ALGORITHMS }
+    severity: ERROR
+    property: ACCEPTED_HASH_DIGEST_ALGORITHMS
+    message: "ACCEPTED_HASH_DIGEST_ALGORITHMS is required when CLIENTSIDEHASHING or ALLOW_CLIENTSIDEHASHING_OVERRIDE is TRUE"
+    suggestion: "Set ACCEPTED_HASH_DIGEST_ALGORITHMS=SHA-256,SHA-384,SHA-512"
+    source: "ClientSideHashingHelper.init"
+requestMetadata:
+  keys:
+    USING_CLIENTSUPPLIED_HASH:
+      type: boolean
+      description: "Set by signclient -clientside when the data is already a hash"
+    CLIENTSIDE_HASHDIGESTALGORITHM:
+      type: digestAlgorithm
+      description: "Set by signclient -clientside -digestalgorithm"

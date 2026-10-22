@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+#
+# SignServer Validator: validates worker configurations, signclient commands
+# and their combination against the rule catalog in validator-rules/.
+#
+#   bin/signserver-validator validate --worker CMSSigner --keystore admin.p12 --truststore truststore.jks
+#   bin/signserver-validator validate --config-file doc/sample-configs/cmssigner.properties --cli "signclient signdocument ..."
+#   bin/signserver-validator selftest
+#   bin/signserver-validator drift --signserver-home .
+#
+# Run with --help for all options.
+
+# Find directory for this script
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ] ; do SOURCE="$(readlink -f "$SOURCE")"; done
+DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
+# OS specific support.
+cygwin=false;
+case "`uname`" in
+  CYGWIN*) cygwin=true ;;
+esac
+
+# Check that JAVA_HOME is set
+if [ ! -n "$JAVA_HOME" ]; then
+    JAVACMD=`command -v java`
+    if [ ! -n "$JAVACMD" ]
+    then
+        echo "You must set JAVA_HOME before running the SignServer validator."
+        exit 2
+    fi
+else
+    JAVACMD=$JAVA_HOME/bin/java
+fi
+
+class_name=org.signserver.validator.cli.tool.ValidatorCLI
+
+if [ -n "${SIGNSERVER_HOME}" ]; then
+  SIGNSRV_HOME=$SIGNSERVER_HOME
+else
+  SIGNSRV_HOME=$DIR/..
+fi
+
+# Check if SIGNSRV_HOME points to valid path
+if [ ! -f "${SIGNSRV_HOME}/bin/signserver-validator" ]; then
+    echo "Could not find the SignServer directory; set SIGNSERVER_HOME"
+    exit 2
+fi
+
+MAIN_JAR=`find "${SIGNSRV_HOME}/lib" -maxdepth 1 -name "SignServer-Validator-CLI*.jar" | head -1`
+
+# Check that classes exist
+if [ ! -f "${MAIN_JAR}" ]
+then
+    echo "You must build the SignServer Validator first (mvn install -pl modules/SignServer-Validator-Core,modules/SignServer-Validator-CLI)."
+    exit 2
+fi
+
+# The jar manifest references the other jars in lib/ and lib/ext/
+CP="${MAIN_JAR}"
+
+# For Cygwin, switch paths to Windows format before running java
+if $cygwin; then
+  CP=`cygpath --path --windows "$CP"`
+fi
+
+# Use the editable rule catalog of this installation, if present, so rule
+# changes take effect without rebuilding. Override with --rules <dir>.
+if [ -d "${SIGNSRV_HOME}/validator-rules" ] && [ -z "${SIGNSERVER_VALIDATOR_RULES+x}" ]; then
+  SIGNSERVER_VALIDATOR_RULES="${SIGNSRV_HOME}/validator-rules"
+fi
+if [ -n "${SIGNSERVER_VALIDATOR_RULES}" ]; then
+  JAVA_OPTS="$JAVA_OPTS -Dsignserver.validator.rules=${SIGNSERVER_VALIDATOR_RULES}"
+fi
+
+# Enable Java network debug logs
+#JAVA_OPTS="$JAVA_OPTS -Djavax.net.debug=ssl"
+
+# Execute the command
+exec "$JAVACMD" $JAVA_OPTS -cp "${CP}" $class_name "$@"

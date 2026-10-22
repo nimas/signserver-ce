@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.signserver</groupId>
+        <artifactId>SignServer-Modules</artifactId>
+        <version>7.7.2-SNAPSHOT</version>
+    </parent>
+    <artifactId>SignServer-Validator-Core</artifactId>
+    <name>SignServer-Validator-Core</name>
+    <description>
+        Rule engine validating worker configurations, signclient commands and
+        their combination against the declarative rule catalog in
+        signserver/validator-rules. Has no server dependencies so it can be
+        embedded in the standalone CLI, the Admin Web or a worker.
+    </description>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <dist.jar>${project.build.finalName}.jar</dist.jar>
+        <validator.rules.dir>${project.basedir}/../../validator-rules</validator.rules.dir>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+            <version>2.17.0</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- Only used by the tests to check the catalog against its JSON Schema -->
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>1.4.0</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!-- The rule catalog is kept outside the module so it is easy to
+                 find and edit; it is embedded in the jar as the default catalog. -->
+            <resource>
+                <directory>${validator.rules.dir}</directory>
+                <targetPath>validator-rules</targetPath>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <validator.rules.dir>${validator.rules.dir}</validator.rules.dir>
+                        <signserver.home>${project.basedir}/../..</signserver.home>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

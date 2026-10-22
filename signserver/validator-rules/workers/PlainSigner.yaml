@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=../schema/catalog.schema.json#/$defs/workerFile
+worker: PlainSigner
+description: "Creates plain (raw) signatures"
+kind: signer
+doc: "doc/htdocs/Plain_Signer.html"
+match:
+  IMPLEMENTATION_CLASS: org.signserver.module.cmssigner.PlainSigner
+capabilities: [clientSideHashing]
+inherits: [base-worker, base-processable, base-signer, client-side-hashing]
+properties:
+  SIGNATUREALGORITHM:
+    type: signatureAlgorithm
+    source: "PlainSigner.SIGNATUREALGORITHM_PROPERTY"
+  LOGREQUEST_DIGESTALGORITHM:
+    type: digestAlgorithm
+    default: "SHA256"
+    source: "PlainSigner.LOGREQUEST_DIGESTALGORITHM_PROPERTY"
+  DO_LOGREQUEST_DIGEST:
+    type: boolean
+    default: "FALSE"
+    source: "PlainSigner.DO_LOGREQUEST_DIGEST"
+rules:
+  - id: PLAIN-LOG-1
+    when: { present: LOGREQUEST_DIGESTALGORITHM }
+    require: { not: { isFalse: DO_LOGREQUEST_DIGEST } }
+    severity: WARNING
+    property: LOGREQUEST_DIGESTALGORITHM
+    message: "LOGREQUEST_DIGESTALGORITHM has no effect because DO_LOGREQUEST_DIGEST is FALSE"
+requestMetadata:
+  allowUnknown: false
+  keys:
+    SIGNATUREALGORITHM:
+      type: signatureAlgorithm
+      description: "Overrides the signature algorithm for one request"
+      source: "PlainSigner.getSignatureAlgorithm: RequestMetadata SIGNATUREALGORITHM"
+extraction:
+  sources:
+    - modules/SignServer-Module-CMSSigner/src/main/java/org/signserver/module/cmssigner/PlainSigner.java
+    - modules/SignServer-Module-CMSSigner/src/main/java/org/signserver/module/cmssigner/ClientSideHashingHelper.java
+  ignoreConstants:
+    - CLIENTSIDE_HASHDIGESTALGORITHM
+    - USING_CLIENTSUPPLIED_HASH

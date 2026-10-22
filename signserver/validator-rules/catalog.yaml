@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=schema/catalog.schema.json#/$defs/indexFile
+#
+# SignServer Validator rule catalog - index.
+#
+# Every file of the catalog must be listed here. The validator engine is
+# generic; all SignServer-specific knowledge lives in the files below.
+# Bump catalogVersion whenever a rule changes (it is printed in every report).
+# See README.md in this directory for the format and the maintenance workflow.
+catalogVersion: "2026.10.1"
+valueTypes: value-types.yaml
+groups:
+  - common/base-worker.yaml
+  - common/base-processable.yaml
+  - common/base-signer.yaml
+  - common/crypto-token.yaml
+  - common/keystore-crypto-token.yaml
+  - common/client-side-hashing.yaml
+workers:
+  - workers/CMSSigner.yaml
+  - workers/PlainSigner.yaml
+  - workers/PDFSigner.yaml
+  - workers/KeystoreCryptoWorker.yaml
+cliOptionGroups:
+  - cli/keystore-options.yaml
+cli:
+  - cli/signdocument.yaml
+  - cli/validatedocument.yaml
+  - cli/signdatagroups.yaml
+  - cli/timestamp.yaml
+combinations: combinations.yaml
+tests:
+  - tests/samples.yaml
+  - tests/config-errors.yaml
+  - tests/cli.yaml
+  - tests/combinations.yaml

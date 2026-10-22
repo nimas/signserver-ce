@@ -1,0 +1,132 @@
+# yaml-language-server: $schema=../schema/catalog.schema.json#/$defs/groupFile
+#
+# Properties every worker accepts (BaseWorker, WorkerFactory, WorkerSessionBean,
+# authorizers, worker logger, archivers).
+group: base-worker
+description: "Properties common to all workers"
+properties:
+  NAME:
+    type: workerName
+    required: true
+    description: "Unique name of the worker"
+    source: "PropertiesConstants.NAME"
+  TYPE:
+    type: workerType
+    required: true
+    description: "Worker type"
+    source: "BaseWorker.init: WorkerType.valueOf(config.getProperty(TYPE))"
+    doc: "doc/htdocs/Common_Worker_Configuration.html"
+  IMPLEMENTATION_CLASS:
+    type: className
+    required: true
+    description: "Class implementing the worker"
+    source: "WorkerConfig.IMPLEMENTATION_CLASS"
+  CRYPTOTOKEN_IMPLEMENTATION_CLASS:
+    type: className
+    description: "Class of an in-worker crypto token (legacy; prefer a separate crypto worker referenced with CRYPTOTOKEN)"
+    source: "WorkerConfig.CRYPTOTOKEN_IMPLEMENTATION_CLASS"
+  DISABLED:
+    type: boolean
+    default: "FALSE"
+    source: "SignServerConstants.DISABLED"
+  AUTHTYPE:
+    type: authType
+    description: "NOAUTH, CLIENTCERT or authorizer class name"
+    source: "WorkerConfig.PROPERTY_AUTHTYPE"
+  CLIENT_VISIBLE:
+    type: boolean
+    default: "FALSE"
+    source: "PreloadedWorkerConfig: CLIENT_VISIBLE"
+  WORKERLOGGER:
+    type: string
+    description: "Comma-separated worker logger class names"
+    source: "WorkerFactory.WORKERLOGGER"
+  ACCOUNTER:
+    type: className
+    source: "WorkerFactory.ACCOUNTER"
+  ARCHIVERS:
+    type: string
+    description: "Comma-separated archiver class names"
+    source: "SignServerConstants.ARCHIVERS"
+  ARCHIVE:
+    type: boolean
+    deprecated: "ARCHIVE is legacy; configure ARCHIVERS instead"
+    source: "SignServerConstants.ARCHIVE"
+  NO_REQUEST_ARCHIVING:
+    type: boolean
+    source: "WorkerConfig.NO_REQUEST_ARCHIVING"
+  MODULENAME:
+    type: string
+    source: "SignServerConstants.MODULENAME"
+  MODULEVERSION:
+    type: string
+    source: "SignServerConstants.MODULEVERSION"
+  USEWORKERENTITYMANAGER:
+    type: boolean
+    source: "SignServerConstants.USEWORKERENTITYMANAGER"
+  OTHER_SIGNERS:
+    type: string
+    description: "Comma-separated names of other signers"
+    source: "WorkerConfig.OTHER_SIGNERS"
+  EXPLICITECC:
+    type: boolean
+    source: "WorkerConfig.PROPERTY_EXPLICITECC"
+  SIGNERCERT:
+    type: string
+    description: "Stored signer certificate"
+    source: "PropertiesConstants.SIGNERCERT"
+  SIGNERCERTCHAIN:
+    type: string
+    description: "Stored signer certificate chain"
+    source: "PropertiesConstants.SIGNERCERTCHAIN"
+  KEYSTORE_DATA:
+    type: string
+    sensitive: true
+    source: "PropertiesConstants.KEYSTORE_DATA"
+  # Worker logger (AllFieldsWorkerLogger, PatternWorkerLogger)
+  LOGPATTERN: { type: string, source: "PatternWorkerLogger: LOGPATTERN" }
+  LOGORDER: { type: string, source: "PatternWorkerLogger: LOGORDER" }
+  LOGDATEFORMAT: { type: string, source: "PatternWorkerLogger: LOGDATEFORMAT" }
+  LOGTIMEZONE: { type: string, source: "PatternWorkerLogger: LOGTIMEZONE" }
+  LOGLEVEL_DEFAULT: { type: string, source: "worker logger: LOGLEVEL_DEFAULT" }
+  # Authorizers
+  ACCEPT_ALL_USERNAMES: { type: boolean, source: "UsernameAuthorizer.ACCEPT_ALL_USERNAMES" }
+  ACCEPT_USERNAMES: { type: string, source: "UsernameAuthorizer.ACCEPT_USERNAMES" }
+  ALLOW_FROM: { type: string, source: "RemoteAddressAuthorizer.PROPERTY_ALLOW_FROM" }
+  ALLOW_ANY: { type: boolean, source: "ListBasedAddressAuthorizer.ALLOW_ANY" }
+  WHITELISTED_DIRECT_ADDRESSES: { type: string, source: "ListBasedAddressAuthorizer" }
+  BLACKLISTED_DIRECT_ADDRESSES: { type: string, source: "ListBasedAddressAuthorizer" }
+  WHITELISTED_FORWARDED_ADDRESSES: { type: string, source: "ListBasedAddressAuthorizer" }
+  BLACKLISTED_FORWARDED_ADDRESSES: { type: string, source: "ListBasedAddressAuthorizer" }
+  MAX_FORWARDED_ADDRESSES: { type: nonNegativeInteger, source: "ListBasedAddressAuthorizer" }
+  AUTHORIZEALLDISPATCHERS: { type: boolean, source: "DispatchedAuthorizer.AUTHORIZEALLDISPATCHERS" }
+  REQUEST_COOKIES_PREFIX: { type: string, source: "CookieAuthorizer.REQUEST_COOKIES_PREFIX" }
+propertyPatterns:
+  - pattern: "USER\\..+"
+    type: string
+    sensitive: true
+    description: "USER.<name>=<password> entries of UsernamePasswordAuthorizer"
+    source: "UsernamePasswordAuthorizer.USER_PREFIX"
+  - pattern: "ARCHIVER\\d+\\..+"
+    type: string
+    description: "Archiver specific settings"
+    source: "WorkerFactory archivers"
+  - pattern: "AUTHCLIENT\\d*.*|AUTHORIZED_CLIENTS.*"
+    type: string
+    description: "Authorized client entries"
+    source: "PropertiesConstants.AUTHCLIENT / AUTHORIZED_CLIENTS"
+rules:
+  - id: BW-AUTH-1
+    description: "USER.* entries only make sense with a username/password authorizer"
+    when: { presentMatching: "USER\\..+" }
+    require:
+      matches: { AUTHTYPE: ".*Username.*Authorizer" }
+    severity: WARNING
+    property: AUTHTYPE
+    message: "USER.* entries are configured but AUTHTYPE is '${AUTHTYPE}', so they are ignored"
+    suggestion: "Set AUTHTYPE=org.signserver.server.UsernamePasswordAuthorizer or remove the USER.* entries"
+  - id: BW-DISABLED-1
+    when: { isTrue: DISABLED }
+    severity: INFO
+    property: DISABLED
+    message: "The worker is disabled (DISABLED=TRUE) and will not process requests"

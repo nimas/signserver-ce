@@ -1,0 +1,49 @@
+# yaml-language-server: $schema=../schema/catalog.schema.json#/$defs/cliFile
+command: validatedocument
+description: "Request a document to be validated (ValidateDocumentCommand)"
+targetKinds: [validator]
+workerOptions: [workername, workerid]
+optionGroups: [keystore-options]
+options:
+  workername: { arg: true, type: workerName }
+  workerid: { arg: true, type: positiveInteger }
+  data: { arg: true }
+  infile: { arg: true, type: path }
+  host: { arg: true }
+  port: { arg: true, type: positiveInteger }
+  protocol:
+    arg: true
+    type: string
+    allowedValues: [WEBSERVICES, HTTP, REST]
+    caseSensitive: true
+    default: WEBSERVICES
+  username: { arg: true }
+  password: { arg: true, sensitive: true }
+  accesstoken: { arg: true, sensitive: true }
+  servlet: { arg: true }
+  metadata: { arg: true, repeatable: true, type: keyValue }
+rules:
+  - id: VD-WORKER-1
+    require: { any: [ { cli.hasOption: workername }, { cli.hasOption: workerid } ] }
+    severity: ERROR
+    option: workername
+    message: "Must specify -workername or -workerid"
+  - id: VD-INPUT-1
+    require: { exactlyOne: [ { cli.hasOption: data }, { cli.hasOption: infile } ] }
+    severity: ERROR
+    option: data
+    message: "Specify exactly one of -data or -infile"
+  - id: VD-AUTH-1
+    when: { all: [ { cli.hasOption: username }, { cli.hasOption: accesstoken } ] }
+    severity: ERROR
+    option: accesstoken
+    message: "Can not specify both -username and -accesstoken"
+  - id: VD-AUTH-2
+    when: { cli.hasOption: accesstoken }
+    require: { cli.optionIn: { protocol: [HTTP, REST] } }
+    severity: ERROR
+    option: accesstoken
+    message: "Can only use -accesstoken with protocol HTTP or REST"
+extraction:
+  sources:
+    - modules/SignServer-Client-CLI/src/main/java/org/signserver/client/cli/defaultimpl/ValidateDocumentCommand.java

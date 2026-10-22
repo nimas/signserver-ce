@@ -1,0 +1,180 @@
+# yaml-language-server: $schema=../schema/catalog.schema.json#/$defs/workerFile
+worker: PDFSigner
+description: "Signs PDF documents (PAdES / PDF signatures)"
+kind: signer
+doc: "doc/htdocs/PDF_Signer.html"
+match:
+  IMPLEMENTATION_CLASS: org.signserver.module.pdfsigner.PDFSigner
+capabilities: [visibleSignature, timestamping]
+inherits: [base-worker, base-processable, base-signer]
+types:
+  pdfDigestAlgorithm:
+    kind: enum
+    values: [SHA1, SHA256, SHA-256, SHA384, SHA-384, SHA512, SHA-512, RIPEMD160]
+    caseInsensitive: false
+    description: "one of SHA1, SHA256, SHA-256, SHA384, SHA-384, SHA512, SHA-512, RIPEMD160 (case-sensitive)"
+  pdfPermission:
+    kind: enum
+    values: [ALLOW_PRINTING, ALLOW_MODIFY_CONTENTS, ALLOW_COPY, ALLOW_MODIFY_ANNOTATIONS,
+             ALLOW_FILL_IN, ALLOW_SCREENREADERS, ALLOW_ASSEMBLY, ALLOW_DEGRADED_PRINTING]
+    caseInsensitive: false
+  pdfPermissionList:
+    kind: list
+    of: pdfPermission
+    description: "comma-separated PDF permissions, e.g. ALLOW_PRINTING,ALLOW_COPY"
+  pdfCertificationLevel:
+    kind: enum
+    values: [NOT_CERTIFIED, NO_CHANGES_ALLOWED, FORM_FILLING, FORM_FILLING_AND_ANNOTATIONS]
+  pdfPage:
+    kind: regex
+    pattern: "(?i)(first|last|\\d+)"
+    description: "First, Last or a page number"
+  pdfRectangle:
+    kind: regex
+    pattern: "\\s*-?\\d+\\s*,\\s*-?\\d+\\s*,\\s*-?\\d+\\s*,\\s*-?\\d+\\s*"
+    description: "llx,lly,urx,ury, e.g. 400,700,500,800"
+properties:
+  DIGESTALGORITHM:
+    type: pdfDigestAlgorithm
+    default: "SHA256"
+    source: "PDFSigner.init: PdfSignatureDigestAlgorithms.isSupported(DIGESTALGORITHM)"
+  REASON: { type: string, default: "Signed by SignServer", source: "PDFSigner.REASON" }
+  LOCATION: { type: string, default: "SignServer", source: "PDFSigner.LOCATION" }
+  ADD_VISIBLE_SIGNATURE: { type: boolean, default: "FALSE", source: "PDFSigner.ADD_VISIBLE_SIGNATURE" }
+  VISIBLE_SIGNATURE_PAGE:
+    type: pdfPage
+    default: "First"
+    invalidSeverity: WARNING
+    description: "Non-numeric values other than First/Last silently fall back to the first page"
+    source: "PDFSigner.VISIBLE_SIGNATURE_PAGE"
+  VISIBLE_SIGNATURE_RECTANGLE: { type: pdfRectangle, default: "400,700,500,800", source: "PDFSigner.VISIBLE_SIGNATURE_RECTANGLE" }
+  VISIBLE_SIGNATURE_NAME: { type: string, source: "PDFSigner.VISIBLE_SIGNATURE_NAME" }
+  VISIBLE_SIGNATURE_CUSTOM_IMAGE_BASE64: { type: string, source: "PDFSigner.VISIBLE_SIGNATURE_CUSTOM_IMAGE_BASE64" }
+  VISIBLE_SIGNATURE_CUSTOM_IMAGE_PATH:
+    type: path
+    description: "Must be inside the deploy-time allowlist pdfsigner.image.path.allowed"
+    source: "PDFSigner.VISIBLE_SIGNATURE_CUSTOM_IMAGE_PATH"
+  VISIBLE_SIGNATURE_CUSTOM_IMAGE_RESIZE_TO_RECTANGLE:
+    type: boolean
+    source: "PDFSigner.VISIBLE_SIGNATURE_CUSTOM_IMAGE_SCALE_TO_RECTANGLE"
+  CERTIFICATION_LEVEL: { type: pdfCertificationLevel, default: "NOT_CERTIFIED", source: "PDFSignerParameters: CERTIFICATION_LEVEL" }
+  USE_TIMESTAMP: { type: boolean, source: "PDFSigner.USE_TIMESTAMP" }
+  TSA_URL: { type: url, source: "PDFSigner.TSA_URL" }
+  TSA_WORKER: { type: workerName, source: "PDFSigner.TSA_WORKER" }
+  TSA_USERNAME: { type: string, source: "PDFSigner.TSA_USERNAME" }
+  TSA_PASSWORD: { type: string, sensitive: true, source: "PDFSigner.TSA_PASSWORD" }
+  TSA_DIGESTALGORITHM:
+    type: digestAlgorithm
+    default: "SHA256"
+    source: "PDFSigner.init: DefaultDigestAlgorithmIdentifierFinder.find(TSA_DIGESTALGORITHM)"
+  EMBED_CRL: { type: boolean, default: "FALSE", source: "PDFSigner.EMBED_CRL" }
+  EMBED_OCSP_RESPONSE: { type: boolean, default: "FALSE", source: "PDFSigner.EMBED_OCSP_RESPONSE" }
+  REFUSE_DOUBLE_INDIRECT_OBJECTS: { type: boolean, default: "FALSE", source: "PDFSigner.REFUSE_DOUBLE_INDIRECT_OBJECTS" }
+  REJECT_PERMISSIONS: { type: pdfPermissionList, source: "PDFSigner.REJECT_PERMISSIONS" }
+  SET_PERMISSIONS: { type: pdfPermissionList, source: "PDFSignerParameters: Permissions.fromSet(SET_PERMISSIONS)" }
+  REMOVE_PERMISSIONS: { type: pdfPermissionList, source: "PDFSignerParameters: Permissions.fromSet(REMOVE_PERMISSIONS)" }
+  SET_OWNERPASSWORD: { type: string, sensitive: true, source: "PDFSigner.SET_OWNERPASSWORD" }
+  ALLOW_SIGNING_WITHOUT_OWNERPASSWORD: { type: boolean, default: "FALSE", source: "PDFSigner.ALLOW_SIGNING_WITHOUT_OWNERPASSWORD" }
+  ARCHIVETODISK: { type: boolean, default: "FALSE", source: "PDFSigner.PROPERTY_ARCHIVETODISK" }
+  ARCHIVETODISK_PATH_BASE: { type: path, source: "PDFSigner.PROPERTY_ARCHIVETODISK_PATH_BASE" }
+  ARCHIVETODISK_PATH_PATTERN: { type: string, default: "${DATE:yyyy/MM/dd}", source: "PDFSigner.PROPERTY_ARCHIVETODISK_PATH_PATTERN" }
+  ARCHIVETODISK_FILENAME_PATTERN: { type: string, source: "PDFSigner.PROPERTY_ARCHIVETODISK_FILENAME_PATTERN" }
+  ALLOW_PROPERTY_OVERRIDE:
+    type: string
+    description: "Comma-separated properties the client may override in the request metadata"
+    source: "PDFSigner.ALLOW_PROPERTY_OVERRIDE"
+rules:
+  - id: PDF-TSA-1
+    when: { all: [ { present: TSA_URL }, { present: TSA_WORKER } ] }
+    severity: ERROR
+    property: TSA_WORKER
+    message: "TSA_URL and TSA_WORKER can not be set at the same time"
+    source: "PDFSigner.init: Can not specify TSA_URL and TSA_WORKER at the same time"
+  - id: PDF-TSA-2
+    when: { isTrue: USE_TIMESTAMP }
+    require: { any: [ { present: TSA_URL }, { present: TSA_WORKER } ] }
+    severity: WARNING
+    property: USE_TIMESTAMP
+    message: "USE_TIMESTAMP=TRUE has no effect without TSA_URL or TSA_WORKER"
+  - id: PDF-TSA-3
+    when: { present: TSA_USERNAME }
+    require: { present: TSA_URL }
+    severity: WARNING
+    property: TSA_USERNAME
+    message: "TSA_USERNAME is only used together with TSA_URL"
+  - id: PDF-IMG-1
+    description: "The base64 image takes precedence over the image path"
+    when: { all: [ { present: VISIBLE_SIGNATURE_CUSTOM_IMAGE_BASE64 }, { present: VISIBLE_SIGNATURE_CUSTOM_IMAGE_PATH } ] }
+    severity: WARNING
+    property: VISIBLE_SIGNATURE_CUSTOM_IMAGE_PATH
+    message: "VISIBLE_SIGNATURE_CUSTOM_IMAGE_PATH is ignored because VISIBLE_SIGNATURE_CUSTOM_IMAGE_BASE64 is set"
+    source: "PDFSigner.init: custom image path only checked when BASE64 is null"
+  - id: PDF-IMG-2
+    when:
+      any:
+        - present: VISIBLE_SIGNATURE_CUSTOM_IMAGE_PATH
+        - present: VISIBLE_SIGNATURE_CUSTOM_IMAGE_BASE64
+        - present: VISIBLE_SIGNATURE_PAGE
+        - present: VISIBLE_SIGNATURE_RECTANGLE
+    require: { isTrue: ADD_VISIBLE_SIGNATURE }
+    severity: WARNING
+    property: ADD_VISIBLE_SIGNATURE
+    message: "Visible signature properties are set but ADD_VISIBLE_SIGNATURE is not TRUE, so they are ignored"
+  - id: PDF-IMG-3
+    when: { all: [ { isTrue: ADD_VISIBLE_SIGNATURE }, { present: VISIBLE_SIGNATURE_CUSTOM_IMAGE_PATH }, { absent: VISIBLE_SIGNATURE_CUSTOM_IMAGE_BASE64 } ] }
+    severity: INFO
+    property: VISIBLE_SIGNATURE_CUSTOM_IMAGE_PATH
+    message: "'${VISIBLE_SIGNATURE_CUSTOM_IMAGE_PATH}' must exist on the server and be inside the deploy-time allowlist pdfsigner.image.path.allowed"
+  - id: PDF-ARCH-1
+    when: { isTrue: ARCHIVETODISK }
+    require: { present: ARCHIVETODISK_PATH_BASE }
+    severity: ERROR
+    property: ARCHIVETODISK_PATH_BASE
+    message: "ARCHIVETODISK=TRUE requires ARCHIVETODISK_PATH_BASE"
+    source: "PDFSigner.init: Archiving path not specified"
+  - id: PDF-OVR-1
+    when: { present: ALLOW_PROPERTY_OVERRIDE }
+    require:
+      listExcludes:
+        property: ALLOW_PROPERTY_OVERRIDE
+        values: [ALLOW_PROPERTY_OVERRIDE, REFUSE_DOUBLE_INDIRECT_OBJECTS, ARCHIVETODISK_FILENAME_PATTERN,
+                 ARCHIVETODISK_PATH_BASE, ARCHIVETODISK_PATH_PATTERN]
+    severity: ERROR
+    property: ALLOW_PROPERTY_OVERRIDE
+    message: "ALLOW_PROPERTY_OVERRIDE contains a property that can not be overridden: ${ALLOW_PROPERTY_OVERRIDE}"
+    source: "PDFSigner.NOT_OVERRIDABLE_PROPERTIES"
+  - id: PDF-LEVELS-1
+    when: { present: INCLUDE_CERTIFICATE_LEVELS }
+    require: { not: { equals: { INCLUDE_CERTIFICATE_LEVELS: "0" } } }
+    severity: ERROR
+    property: INCLUDE_CERTIFICATE_LEVELS
+    message: "INCLUDE_CERTIFICATE_LEVELS must be >= 1 for PDFSigner"
+    source: "PDFSigner.init: Only numbers >= 1 supported"
+requestMetadata:
+  allowUnknown: false
+  keys:
+    pdfPassword: { type: string, description: "Set by signclient -pdfpassword" }
+    REASON: { type: string, requiresListed: ALLOW_PROPERTY_OVERRIDE }
+    LOCATION: { type: string, requiresListed: ALLOW_PROPERTY_OVERRIDE }
+    ADD_VISIBLE_SIGNATURE: { type: boolean, requiresListed: ALLOW_PROPERTY_OVERRIDE }
+    USE_TIMESTAMP: { type: boolean, requiresListed: ALLOW_PROPERTY_OVERRIDE }
+    EMBED_CRL: { type: boolean, requiresListed: ALLOW_PROPERTY_OVERRIDE }
+    EMBED_OCSP_RESPONSE: { type: boolean, requiresListed: ALLOW_PROPERTY_OVERRIDE }
+    REJECT_PERMISSIONS: { type: pdfPermissionList, requiresListed: ALLOW_PROPERTY_OVERRIDE }
+    SET_PERMISSIONS: { type: pdfPermissionList, requiresListed: ALLOW_PROPERTY_OVERRIDE }
+    REMOVE_PERMISSIONS: { type: pdfPermissionList, requiresListed: ALLOW_PROPERTY_OVERRIDE }
+    SET_OWNERPASSWORD: { type: string, requiresListed: ALLOW_PROPERTY_OVERRIDE }
+    ALLOW_SIGNING_WITHOUT_OWNERPASSWORD: { type: boolean, requiresListed: ALLOW_PROPERTY_OVERRIDE }
+    VISIBLE_SIGNATURE_PAGE: { type: pdfPage, requiresListed: ALLOW_PROPERTY_OVERRIDE }
+    VISIBLE_SIGNATURE_RECTANGLE: { type: pdfRectangle, requiresListed: ALLOW_PROPERTY_OVERRIDE }
+    VISIBLE_SIGNATURE_NAME: { type: string, requiresListed: ALLOW_PROPERTY_OVERRIDE }
+    VISIBLE_SIGNATURE_CUSTOM_IMAGE_BASE64: { type: string, requiresListed: ALLOW_PROPERTY_OVERRIDE }
+    VISIBLE_SIGNATURE_CUSTOM_IMAGE_RESIZE_TO_RECTANGLE: { type: boolean, requiresListed: ALLOW_PROPERTY_OVERRIDE }
+    CERTIFICATION_LEVEL: { type: pdfCertificationLevel, requiresListed: ALLOW_PROPERTY_OVERRIDE }
+    SIGNERCERTCHAIN: { type: string, requiresListed: ALLOW_PROPERTY_OVERRIDE }
+    DIGESTALGORITHM: { type: pdfDigestAlgorithm, requiresListed: ALLOW_PROPERTY_OVERRIDE }
+extraction:
+  sources:
+    - modules/SignServer-Module-PDFSigner/src/main/java/org/signserver/module/pdfsigner/PDFSigner.java
+  ignoreConstants:
+    - SHA256          # default digest algorithm value

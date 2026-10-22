@@ -1,0 +1,331 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://signserver.org/validator-rules/catalog.schema.json",
+  "title": "SignServer Validator rule catalog",
+  "description": "Schema for every file of the validator rule catalog. Each file type has a definition under $defs; select it with a JSON pointer, e.g. catalog.schema.json#/$defs/workerFile.",
+  "$defs": {
+    "propertyName": { "type": "string", "pattern": "^[A-Za-z0-9_.]+$" },
+    "severity": { "enum": ["ERROR", "WARNING", "INFO"] },
+    "stringList": { "type": "array", "items": { "type": "string" } },
+
+    "indexFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["catalogVersion", "valueTypes", "groups", "workers", "cli"],
+      "properties": {
+        "catalogVersion": { "type": "string" },
+        "valueTypes": { "type": "string" },
+        "groups": { "$ref": "#/$defs/stringList" },
+        "workers": { "$ref": "#/$defs/stringList" },
+        "cliOptionGroups": { "$ref": "#/$defs/stringList" },
+        "cli": { "$ref": "#/$defs/stringList" },
+        "combinations": { "type": "string" },
+        "tests": { "$ref": "#/$defs/stringList" }
+      }
+    },
+
+    "typeDef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": { "enum": ["enum", "integer", "string", "regex", "url", "path", "list", "oneOf", "digestAlgorithm", "signatureAlgorithm"] },
+        "values": { "$ref": "#/$defs/stringList" },
+        "caseInsensitive": { "type": "boolean" },
+        "min": { "type": "integer" },
+        "max": { "type": "integer" },
+        "pattern": { "type": "string" },
+        "of": { "type": "string" },
+        "separator": { "type": "string" },
+        "types": { "$ref": "#/$defs/stringList" },
+        "description": { "type": "string" }
+      }
+    },
+    "typeMap": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[A-Za-z][A-Za-z0-9]*$" },
+      "additionalProperties": { "$ref": "#/$defs/typeDef" }
+    },
+    "valueTypesFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["types"],
+      "properties": { "types": { "$ref": "#/$defs/typeMap" } }
+    },
+
+    "propertySpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string" },
+        "required": { "type": "boolean" },
+        "default": { "type": "string" },
+        "allowedValues": { "$ref": "#/$defs/stringList" },
+        "caseSensitive": { "type": "boolean" },
+        "min": { "type": "integer" },
+        "max": { "type": "integer" },
+        "invalidSeverity": { "$ref": "#/$defs/severity" },
+        "description": { "type": "string" },
+        "source": { "type": "string" },
+        "doc": { "type": "string" },
+        "deprecated": { "type": "string" },
+        "sensitive": { "type": "boolean" },
+        "codeRef": { "enum": ["none"] }
+      }
+    },
+    "propertyMap": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/propertyName" },
+      "additionalProperties": { "$ref": "#/$defs/propertySpec" }
+    },
+    "patternSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pattern"],
+      "properties": {
+        "pattern": { "type": "string" },
+        "type": { "type": "string" },
+        "allowedValues": { "$ref": "#/$defs/stringList" },
+        "sensitive": { "type": "boolean" },
+        "description": { "type": "string" },
+        "source": { "type": "string" }
+      }
+    },
+
+    "predicate": {
+      "description": "A condition: an object with exactly one predicate key.",
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+        "present": { "type": "string" },
+        "absent": { "type": "string" },
+        "presentMatching": { "type": "string" },
+        "isTrue": { "type": "string" },
+        "isFalse": { "type": "string" },
+        "anyTrue": { "$ref": "#/$defs/stringList" },
+        "allTrue": { "$ref": "#/$defs/stringList" },
+        "equals": { "type": "object", "additionalProperties": { "type": "string" } },
+        "in": { "type": "object", "additionalProperties": { "$ref": "#/$defs/stringList" } },
+        "matches": { "type": "object", "additionalProperties": { "type": "string" } },
+        "listExcludes": {
+          "type": "object", "additionalProperties": false, "required": ["property", "values"],
+          "properties": { "property": { "type": "string" }, "values": { "$ref": "#/$defs/stringList" } }
+        },
+        "all": { "type": "array", "items": { "$ref": "#/$defs/predicate" } },
+        "any": { "type": "array", "items": { "$ref": "#/$defs/predicate" } },
+        "exactlyOne": { "type": "array", "items": { "$ref": "#/$defs/predicate" } },
+        "atMostOne": { "type": "array", "items": { "$ref": "#/$defs/predicate" } },
+        "not": { "$ref": "#/$defs/predicate" },
+        "cli.command": { "oneOf": [ { "type": "string" }, { "$ref": "#/$defs/stringList" } ] },
+        "cli.hasOption": { "type": "string" },
+        "cli.optionEquals": { "type": "object", "additionalProperties": { "type": "string" } },
+        "cli.optionIn": { "type": "object", "additionalProperties": { "$ref": "#/$defs/stringList" } },
+        "cli.optionMatches": { "type": "object", "additionalProperties": { "type": "string" } },
+        "cli.optionValueInList": {
+          "type": "object", "additionalProperties": false, "required": ["option", "property"],
+          "properties": {
+            "option": { "type": "string" }, "property": { "type": "string" },
+            "normalize": { "enum": ["none", "upper", "digest"] }
+          }
+        },
+        "worker.kind": { "oneOf": [ { "type": "string" }, { "$ref": "#/$defs/stringList" } ] },
+        "worker.is": { "oneOf": [ { "type": "string" }, { "$ref": "#/$defs/stringList" } ] },
+        "worker.hasCapability": { "type": "string" },
+        "worker.known": { "type": "boolean" },
+        "directory.workerExists": { "type": "string" },
+        "directory.workerKind": {
+          "type": "object", "additionalProperties": false, "required": ["property", "kind"],
+          "properties": { "property": { "type": "string" }, "kind": { "type": "string" } }
+        },
+        "custom": {
+          "type": "object", "required": ["check"],
+          "properties": { "check": { "type": "string" } }
+        }
+      },
+      "additionalProperties": false
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "severity", "message"],
+      "anyOf": [ { "required": ["when"] }, { "required": ["require"] } ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Z][A-Z0-9-]*$" },
+        "description": { "type": "string" },
+        "when": { "$ref": "#/$defs/predicate" },
+        "require": { "$ref": "#/$defs/predicate" },
+        "severity": { "$ref": "#/$defs/severity" },
+        "message": { "type": "string" },
+        "suggestion": { "type": "string" },
+        "property": { "type": "string" },
+        "option": { "type": "string" },
+        "source": { "type": "string" }
+      }
+    },
+    "ruleList": { "type": "array", "items": { "$ref": "#/$defs/rule" } },
+    "conditionalInherit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["when", "groups"],
+      "properties": {
+        "when": { "$ref": "#/$defs/predicate" },
+        "groups": { "$ref": "#/$defs/stringList" }
+      }
+    },
+    "metadataKeySpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string" },
+        "allowedValues": { "$ref": "#/$defs/stringList" },
+        "requiresTrue": { "type": "string" },
+        "requiresListed": { "type": "string" },
+        "description": { "type": "string" },
+        "source": { "type": "string" }
+      }
+    },
+    "requestMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allowUnknown": { "type": "boolean" },
+        "keys": { "type": "object", "additionalProperties": { "$ref": "#/$defs/metadataKeySpec" } }
+      }
+    },
+    "extraction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sources"],
+      "properties": {
+        "sources": { "$ref": "#/$defs/stringList" },
+        "ignoreConstants": { "$ref": "#/$defs/stringList" }
+      }
+    },
+
+    "groupFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["group"],
+      "properties": {
+        "group": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "description": { "type": "string" },
+        "doc": { "type": "string" },
+        "types": { "$ref": "#/$defs/typeMap" },
+        "properties": { "$ref": "#/$defs/propertyMap" },
+        "propertyPatterns": { "type": "array", "items": { "$ref": "#/$defs/patternSpec" } },
+        "conditionalInherits": { "type": "array", "items": { "$ref": "#/$defs/conditionalInherit" } },
+        "rules": { "$ref": "#/$defs/ruleList" },
+        "combinationRules": { "$ref": "#/$defs/ruleList" },
+        "requestMetadata": { "$ref": "#/$defs/requestMetadata" }
+      }
+    },
+    "workerFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["worker", "kind", "match"],
+      "properties": {
+        "worker": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9]*$" },
+        "description": { "type": "string" },
+        "kind": { "enum": ["signer", "crypto", "validator", "timestamp", "sod", "other"] },
+        "doc": { "type": "string" },
+        "match": {
+          "type": "object", "minProperties": 1,
+          "additionalProperties": { "type": "string" }
+        },
+        "capabilities": { "$ref": "#/$defs/stringList" },
+        "inherits": { "$ref": "#/$defs/stringList" },
+        "conditionalInherits": { "type": "array", "items": { "$ref": "#/$defs/conditionalInherit" } },
+        "types": { "$ref": "#/$defs/typeMap" },
+        "properties": { "$ref": "#/$defs/propertyMap" },
+        "propertyPatterns": { "type": "array", "items": { "$ref": "#/$defs/patternSpec" } },
+        "rules": { "$ref": "#/$defs/ruleList" },
+        "combinationRules": { "$ref": "#/$defs/ruleList" },
+        "requestMetadata": { "$ref": "#/$defs/requestMetadata" },
+        "extraction": { "$ref": "#/$defs/extraction" }
+      }
+    },
+
+    "optionSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["arg"],
+      "properties": {
+        "arg": { "type": "boolean" },
+        "type": { "type": "string" },
+        "allowedValues": { "$ref": "#/$defs/stringList" },
+        "caseSensitive": { "type": "boolean" },
+        "default": { "type": "string" },
+        "repeatable": { "type": "boolean" },
+        "sensitive": { "type": "boolean" },
+        "description": { "type": "string" }
+      }
+    },
+    "optionMap": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[A-Za-z0-9_-]+$" },
+      "additionalProperties": { "$ref": "#/$defs/optionSpec" }
+    },
+    "cliOptionGroupFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["optionGroup", "options"],
+      "properties": {
+        "optionGroup": { "type": "string" },
+        "description": { "type": "string" },
+        "options": { "$ref": "#/$defs/optionMap" },
+        "rules": { "$ref": "#/$defs/ruleList" },
+        "extraction": { "$ref": "#/$defs/extraction" }
+      }
+    },
+    "cliFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "options"],
+      "properties": {
+        "command": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "description": { "type": "string" },
+        "targetKinds": { "$ref": "#/$defs/stringList" },
+        "workerOptions": { "$ref": "#/$defs/stringList" },
+        "optionGroups": { "$ref": "#/$defs/stringList" },
+        "options": { "$ref": "#/$defs/optionMap" },
+        "rules": { "$ref": "#/$defs/ruleList" },
+        "extraction": { "$ref": "#/$defs/extraction" }
+      }
+    },
+    "combinationsFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rules"],
+      "properties": { "rules": { "$ref": "#/$defs/ruleList" } }
+    },
+
+    "configMap": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "goldenTest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "extends": { "type": "string" },
+        "config": { "$ref": "#/$defs/configMap" },
+        "otherWorkers": { "type": "array", "items": { "$ref": "#/$defs/configMap" } },
+        "cli": { "type": "string" },
+        "strict": { "type": "boolean" },
+        "expectPassed": { "type": "boolean" },
+        "expectCodes": { "$ref": "#/$defs/stringList" },
+        "forbidCodes": { "$ref": "#/$defs/stringList" }
+      }
+    },
+    "testFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tests"],
+      "properties": { "tests": { "type": "array", "items": { "$ref": "#/$defs/goldenTest" } } }
+    }
+  }
+}

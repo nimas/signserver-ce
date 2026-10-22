@@ -1,0 +1,51 @@
+# yaml-language-server: $schema=../schema/catalog.schema.json#/$defs/groupFile
+#
+# Properties of all signers (BaseSigner) and the generic signer properties of
+# SignServerConstants.
+group: base-signer
+description: "Properties common to signers"
+properties:
+  INCLUDE_CERTIFICATE_LEVELS:
+    type: nonNegativeInteger
+    source: "BaseSigner.init: WorkerConfig.PROPERTY_INCLUDE_CERTIFICATE_LEVELS"
+  KEYUSAGELIMIT:
+    type: keyUsageLimit
+    default: "-1"
+    source: "SignServerConstants.KEYUSAGELIMIT"
+  DISABLEKEYUSAGECOUNTER:
+    type: boolean
+    default: "FALSE"
+    source: "SignServerConstants.DISABLEKEYUSAGECOUNTER"
+  CHECKCERTVALIDITY:
+    type: boolean
+    default: "TRUE"
+    source: "SignServerConstants.CHECKCERTVALIDITY"
+  CHECKCERTPRIVATEKEYVALIDITY:
+    type: boolean
+    default: "TRUE"
+    source: "SignServerConstants.CHECKCERTPRIVATEKEYVALIDITY"
+  MINREMAININGCERTVALIDITY:
+    type: nonNegativeInteger
+    description: "Minimum remaining validity of the signer certificate, in days"
+    source: "SignServerConstants.MINREMAININGCERTVALIDITY"
+  NOCERTIFICATES:
+    type: boolean
+    default: "FALSE"
+    source: "SignServerConstants.NOCERTIFICATES"
+rules:
+  - id: BS-TYPE-1
+    description: "Signers are processable workers"
+    require: { equals: { TYPE: PROCESSABLE } }
+    severity: ERROR
+    property: TYPE
+    message: "TYPE is '${TYPE}' but a signer must have TYPE=PROCESSABLE"
+  - id: BS-KEYUSAGE-1
+    description: "KEYUSAGELIMIT has no effect when the key usage counter is disabled"
+    when:
+      all:
+        - isTrue: DISABLEKEYUSAGECOUNTER
+        - present: KEYUSAGELIMIT
+        - not: { equals: { KEYUSAGELIMIT: "-1" } }
+    severity: WARNING
+    property: KEYUSAGELIMIT
+    message: "KEYUSAGELIMIT=${KEYUSAGELIMIT} is ignored because DISABLEKEYUSAGECOUNTER=TRUE"

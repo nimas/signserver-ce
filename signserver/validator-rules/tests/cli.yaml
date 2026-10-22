@@ -1,0 +1,50 @@
+# yaml-language-server: $schema=../schema/catalog.schema.json#/$defs/testFile
+tests:
+  - name: signdocument-valid
+    cli: "bin/signclient signdocument -workername CMSSigner -infile /tmp/a.txt -outfile /tmp/a.p7s"
+    expectPassed: true
+    forbidCodes: [CLI_UNKNOWN_OPTION, CLI_MISSING_ARGUMENT]
+
+  - name: signdocument-unknown-option-with-suggestion
+    cli: "signclient signdocument -workerName CMSSigner -data hello"
+    expectPassed: false
+    description: "Options are case-sensitive: -workerName is unknown (did you mean -workername?)"
+    expectCodes: ["CLI_UNKNOWN_OPTION:workerName"]
+
+  - name: signdocument-bad-protocol
+    cli: "signclient signdocument -workername CMSSigner -data hello -protocol http"
+    expectPassed: false
+    expectCodes: ["CLI_VALUE_INVALID:protocol"]
+
+  - name: signdocument-missing-input
+    cli: "signclient signdocument -workername CMSSigner"
+    expectPassed: false
+    expectCodes: ["RULE_SD-INPUT-1"]
+
+  - name: signdocument-clientside-needs-digest-and-outfile
+    cli: "signclient signdocument -workername CMSSigner -infile a.txt -clientside"
+    expectPassed: false
+    expectCodes: ["RULE_SD-CS-1", "RULE_SD-CS-2"]
+
+  - name: signdocument-missing-argument
+    cli: "signclient signdocument -workername CMSSigner -data hello -outfile"
+    expectPassed: false
+    expectCodes: ["CLI_MISSING_ARGUMENT:outfile"]
+
+  - name: signdocument-quoted-metadata
+    cli: "signclient signdocument -workername PDFSigner -infile 'my file.pdf' -outfile out.pdf -metadata \"REASON=I agree\""
+    expectPassed: true
+
+  - name: unknown-command
+    cli: "signclient signdokument -workername X"
+    expectPassed: false
+    expectCodes: ["CLI_UNKNOWN_COMMAND"]
+
+  - name: timestamp-valid
+    cli: "signclient timestamp -url http://localhost:8080/signserver/tsa?workerName=TimeStampSigner -instr hello -digestalgorithm SHA256"
+    expectPassed: true
+
+  - name: timestamp-bad-digest
+    cli: "signclient timestamp -url http://localhost:8080/signserver/tsa -instr hello -digestalgorithm xyz"
+    expectPassed: false
+    expectCodes: ["CLI_VALUE_INVALID:digestalgorithm"]

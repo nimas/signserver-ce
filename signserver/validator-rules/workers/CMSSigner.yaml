@@ -1,0 +1,86 @@
+# yaml-language-server: $schema=../schema/catalog.schema.json#/$defs/workerFile
+worker: CMSSigner
+description: "Creates CMS (PKCS#7) signatures"
+kind: signer
+doc: "doc/htdocs/CMS_Signer.html"
+match:
+  IMPLEMENTATION_CLASS: org.signserver.module.cmssigner.CMSSigner
+capabilities: [clientSideHashing, detachedSignature]
+inherits: [base-worker, base-processable, base-signer, client-side-hashing]
+properties:
+  SIGNATUREALGORITHM:
+    type: signatureAlgorithm
+    description: "Signature algorithm; default depends on the key"
+    source: "CMSSigner.SIGNATUREALGORITHM_PROPERTY"
+  DETACHEDSIGNATURE:
+    type: boolean
+    default: "FALSE"
+    source: "CMSSigner.DETACHEDSIGNATURE_PROPERTY"
+  ALLOW_DETACHEDSIGNATURE_OVERRIDE:
+    type: boolean
+    default: "FALSE"
+    description: "Allow the client to choose DETACHEDSIGNATURE in the request metadata"
+    source: "CMSSigner.ALLOW_SIGNATURETYPE_OVERRIDE_PROPERTY"
+  CONTENTOID:
+    type: oid
+    source: "CMSSigner.CONTENT_OID_PROPERTY"
+  ALLOW_CONTENTOID_OVERRIDE:
+    type: boolean
+    default: "FALSE"
+    source: "CMSSigner.ALLOW_CONTENTOID_OVERRIDE"
+  DER_RE_ENCODE:
+    type: boolean
+    default: "FALSE"
+    source: "CMSSigner.DER_RE_ENCODE_PROPERTY"
+  DIRECTSIGNATURE:
+    type: boolean
+    default: "FALSE"
+    source: "CMSSigner.DIRECTSIGNATURE_PROPERTY"
+  DO_LOGREQUEST_DIGEST:
+    type: boolean
+    default: "FALSE"
+    source: "CMSSigner.DO_LOGREQUEST_DIGEST"
+  DO_LOGRESPONSE_DIGEST:
+    type: boolean
+    default: "FALSE"
+    source: "CMSSigner.DO_LOGRESPONSE_DIGEST"
+  LOGREQUEST_DIGESTALGORITHM:
+    type: digestAlgorithm
+    default: "SHA256"
+    source: "CMSSigner.LOGREQUEST_DIGESTALGORITHM_PROPERTY"
+  LOGRESPONSE_DIGESTALGORITHM:
+    type: digestAlgorithm
+    default: "SHA256"
+    source: "CMSSigner.LOGRESPONSE_DIGESTALGORITHM_PROPERTY"
+rules:
+  - id: CMS-LOG-1
+    when: { present: LOGREQUEST_DIGESTALGORITHM }
+    require: { not: { isFalse: DO_LOGREQUEST_DIGEST } }
+    severity: WARNING
+    property: LOGREQUEST_DIGESTALGORITHM
+    message: "LOGREQUEST_DIGESTALGORITHM has no effect because DO_LOGREQUEST_DIGEST is FALSE"
+  - id: CMS-DIRECT-1
+    description: "Direct signatures (no signed attributes) cannot be combined with client-side hashing"
+    when: { isTrue: DIRECTSIGNATURE }
+    require: { not: { anyTrue: [CLIENTSIDEHASHING, ALLOW_CLIENTSIDEHASHING_OVERRIDE] } }
+    severity: WARNING
+    property: DIRECTSIGNATURE
+    message: "DIRECTSIGNATURE=TRUE together with client-side hashing is not supported by most verifiers"
+requestMetadata:
+  allowUnknown: false
+  keys:
+    DETACHEDSIGNATURE:
+      type: boolean
+      requiresTrue: ALLOW_DETACHEDSIGNATURE_OVERRIDE
+      source: "CMSSigner: RequestMetadata DETACHEDSIGNATURE_PROPERTY"
+    CONTENTOID:
+      type: oid
+      requiresTrue: ALLOW_CONTENTOID_OVERRIDE
+      source: "CMSSigner: RequestMetadata CONTENT_OID_PROPERTY"
+extraction:
+  sources:
+    - modules/SignServer-Module-CMSSigner/src/main/java/org/signserver/module/cmssigner/CMSSigner.java
+    - modules/SignServer-Module-CMSSigner/src/main/java/org/signserver/module/cmssigner/ClientSideHashingHelper.java
+  ignoreConstants:
+    - CLIENTSIDE_HASHDIGESTALGORITHM   # request metadata key, not a worker property
+    - USING_CLIENTSUPPLIED_HASH        # request metadata key, not a worker property

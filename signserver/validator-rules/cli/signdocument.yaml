@@ -1,0 +1,164 @@
+# yaml-language-server: $schema=../schema/catalog.schema.json#/$defs/cliFile
+command: signdocument
+description: "Request a document to be signed (SignDocumentCommand)"
+targetKinds: [signer]
+workerOptions: [workername, workerid]
+optionGroups: [keystore-options]
+options:
+  workername: { arg: true, type: workerName }
+  workerid: { arg: true, type: positiveInteger }
+  data: { arg: true }
+  infile: { arg: true, type: path }
+  stdin: { arg: false }
+  outfile: { arg: true, type: path }
+  host: { arg: true }
+  hosts: { arg: true, type: hostList }
+  port: { arg: true, type: positiveInteger }
+  baseurlpath: { arg: true, default: "/signserver" }
+  servlet: { arg: true }
+  protocol:
+    arg: true
+    type: string
+    allowedValues: [WEBSERVICES, CLIENTWS, HTTP, REST]
+    caseSensitive: true
+    default: HTTP
+  username: { arg: true }
+  password: { arg: true, sensitive: true }
+  accesstoken: { arg: true, sensitive: true }
+  pdfpassword: { arg: true, sensitive: true }
+  metadata: { arg: true, repeatable: true, type: keyValue }
+  indir: { arg: true, type: path }
+  outdir: { arg: true, type: path }
+  threads: { arg: true, type: positiveInteger }
+  removefromindir: { arg: false }
+  onefirst: { arg: false }
+  startall: { arg: false }
+  clientside: { arg: false }
+  digestalgorithm: { arg: true, type: digestAlgorithm }
+  filetype: { arg: true }
+  extraoption: { arg: true, repeatable: true, type: keyValue }
+  timeout: { arg: true, type: nonNegativeInteger }
+  loadbalancing:
+    arg: true
+    type: string
+    allowedValues: [NONE, ROUND_ROBIN]
+    caseSensitive: true
+    default: NONE
+  publickey: { arg: true, type: path }
+rules:
+  - id: SD-WORKER-1
+    when: { not: { cli.optionEquals: { protocol: HTTP } } }
+    require: { any: [ { cli.hasOption: workername }, { cli.hasOption: workerid } ] }
+    severity: ERROR
+    option: workername
+    message: "Must specify -workername or -workerid when not using protocol HTTP"
+  - id: SD-WORKER-2
+    require: { atMostOne: [ { cli.hasOption: workername }, { cli.hasOption: workerid } ] }
+    severity: WARNING
+    option: workerid
+    message: "Both -workername and -workerid are given; only one of them is used"
+  - id: SD-INPUT-1
+    require:
+      any:
+        - cli.hasOption: data
+        - cli.hasOption: infile
+        - cli.hasOption: indir
+        - cli.hasOption: stdin
+    severity: ERROR
+    option: data
+    message: "Missing -data, -infile, -indir or -stdin"
+  - id: SD-INPUT-2
+    require:
+      atMostOne:
+        - cli.hasOption: data
+        - cli.hasOption: infile
+        - cli.hasOption: indir
+        - cli.hasOption: stdin
+    severity: ERROR
+    option: data
+    message: "Can not specify more than one of -data, -infile, -indir or -stdin"
+  - id: SD-BATCH-1
+    when: { cli.hasOption: indir }
+    require: { cli.hasOption: outdir }
+    severity: ERROR
+    option: outdir
+    message: "Missing -outdir (required with -indir)"
+  - id: SD-BATCH-2
+    when: { all: [ { cli.hasOption: infile }, { cli.hasOption: outdir } ] }
+    severity: ERROR
+    option: outdir
+    message: "Can not specify both -infile and -outdir"
+  - id: SD-BATCH-3
+    when:
+      any:
+        - cli.hasOption: threads
+        - cli.hasOption: onefirst
+        - cli.hasOption: startall
+        - cli.hasOption: removefromindir
+    require: { cli.hasOption: indir }
+    severity: ERROR
+    option: indir
+    message: "-threads, -onefirst, -startall and -removefromindir are only supported in batch mode (-indir)"
+  - id: SD-BATCH-4
+    when: { all: [ { cli.hasOption: onefirst }, { cli.hasOption: startall } ] }
+    severity: ERROR
+    option: onefirst
+    message: "Can not specify both -onefirst and -startall"
+  - id: SD-CS-1
+    when: { cli.hasOption: clientside }
+    require: { cli.hasOption: digestalgorithm }
+    severity: ERROR
+    option: digestalgorithm
+    message: "Must specify -digestalgorithm when using -clientside"
+  - id: SD-CS-2
+    when: { cli.hasOption: clientside }
+    require: { any: [ { cli.hasOption: outfile }, { cli.hasOption: outdir } ] }
+    severity: ERROR
+    option: outfile
+    message: "Must specify -outfile or -outdir when using -clientside"
+  - id: SD-CS-3
+    when: { cli.hasOption: clientside }
+    require: { any: [ { cli.hasOption: infile }, { cli.hasOption: indir }, { cli.hasOption: stdin } ] }
+    severity: ERROR
+    option: clientside
+    message: "Can only use -clientside with -infile, -indir or -stdin"
+  - id: SD-CS-4
+    when: { any: [ { cli.hasOption: digestalgorithm }, { cli.hasOption: filetype } ] }
+    require: { cli.hasOption: clientside }
+    severity: ERROR
+    option: digestalgorithm
+    message: "-digestalgorithm and -filetype can only be used with -clientside"
+  - id: SD-NET-1
+    when: { all: [ { cli.hasOption: host }, { cli.hasOption: hosts } ] }
+    severity: ERROR
+    option: hosts
+    message: "Can only specify one of -host and -hosts"
+  - id: SD-NET-2
+    when:
+      any:
+        - cli.hasOption: hosts
+        - cli.hasOption: timeout
+        - all: [ { cli.hasOption: loadbalancing }, { not: { cli.optionEquals: { loadbalancing: NONE } } } ]
+    require: { cli.optionIn: { protocol: [HTTP, REST] } }
+    severity: ERROR
+    option: protocol
+    message: "-hosts, -timeout and -loadbalancing can only be used with protocol HTTP or REST"
+  - id: SD-AUTH-1
+    when: { all: [ { cli.hasOption: username }, { cli.hasOption: accesstoken } ] }
+    severity: ERROR
+    option: accesstoken
+    message: "Can not specify both -username and -accesstoken"
+  - id: SD-AUTH-2
+    when: { cli.hasOption: accesstoken }
+    require: { cli.optionIn: { protocol: [HTTP, REST] } }
+    severity: ERROR
+    option: accesstoken
+    message: "Can only use -accesstoken with protocol HTTP or REST"
+  - id: SD-AUTH-3
+    when: { cli.hasOption: password }
+    severity: WARNING
+    option: password
+    message: "The password is given on the command line and may end up in the shell history; omit -password to be prompted"
+extraction:
+  sources:
+    - modules/SignServer-Client-CLI/src/main/java/org/signserver/client/cli/defaultimpl/SignDocumentCommand.java
