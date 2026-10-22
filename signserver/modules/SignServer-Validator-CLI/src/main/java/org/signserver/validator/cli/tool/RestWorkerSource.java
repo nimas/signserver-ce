@@ -103,16 +103,25 @@ public final class RestWorkerSource implements WorkerDirectory {
             ctx.init(kmf == null ? null : kmf.getKeyManagers(), tmf == null ? null : tmf.getTrustManagers(), null);
             return ctx;
         } catch (IOException | GeneralSecurityException ex) {
-            throw new RestException("Unable to set up TLS: " + ex.getMessage(), ex);
+            throw new RestException("Unable to set up TLS: " + ex, ex);
         }
     }
 
     private static KeyStore loadKeyStore(final Path file, final char[] password)
-            throws IOException, GeneralSecurityException {
+            throws IOException, GeneralSecurityException, RestException {
+        if (!Files.isRegularFile(file)) {
+            throw new RestException("Keystore file not found: " + file.toAbsolutePath());
+        }
         final String name = file.getFileName().toString().toLowerCase(Locale.ROOT);
         final KeyStore ks = KeyStore.getInstance(name.endsWith(".jks") ? "JKS" : "PKCS12");
         try (InputStream in = Files.newInputStream(file)) {
             ks.load(in, password);
+        } catch (IOException ex) {
+            if (ex.getCause() instanceof java.security.UnrecoverableKeyException
+                    || String.valueOf(ex.getMessage()).toLowerCase(Locale.ROOT).contains("password")) {
+                throw new RestException("Wrong password for keystore " + file);
+            }
+            throw new RestException("Can not read keystore " + file + ": " + ex.getMessage(), ex);
         }
         return ks;
     }

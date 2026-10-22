@@ -30,10 +30,14 @@ MAINTAINING.md            how to update the catalog, by hand or with AI
 ## Running the validator
 
 ```bash
-# Against a running SignServer (REST API, needs an admin client certificate)
+# Against a running SignServer (REST API on the HTTPS port, needs an admin
+# client certificate). With the demo TLS setup (res/test/dss10) this is:
 bin/signserver-validator validate --worker CMSSigner \
-    --keystore admin.p12 --truststore truststore.jks \
+    --keystore res/test/dss10/dss10_admin1.p12 \
+    --truststore res/test/dss10/dss10_truststore.jks \
     --cli "signclient signdocument -workername CMSSigner -infile a.txt -outfile a.p7s"
+# The keystore password is prompted for, or taken from
+# SIGNSERVER_VALIDATOR_KEYSTORE_PASSWORD. Use your own admin keystore in production.
 
 # Offline, from a properties file (setproperties / dumpproperties format)
 bin/signserver-validator validate --config-file doc/sample-configs/cmssigner.properties

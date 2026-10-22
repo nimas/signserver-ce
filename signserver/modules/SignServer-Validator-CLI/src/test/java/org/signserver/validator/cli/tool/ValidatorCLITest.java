@@ -84,6 +84,13 @@ public class ValidatorCLITest {
     }
 
     @Test
+    public void testMissingKeystoreFile() {
+        assertEquals(ValidatorCLI.EXIT_ERROR, run("validate", "--worker", "CMSSigner",
+                "--keystore", "does-not-exist.p12", "--keystorepwd", "x"));
+        assertTrue(err.toString(), err.toString().contains("Keystore file not found"));
+    }
+
+    @Test
     public void testSelftest() {
         assertEquals(out(), ValidatorCLI.EXIT_PASSED, run("selftest"));
         assertTrue(out(), out().contains("golden tests passed"));
