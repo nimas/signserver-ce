@@ -3,7 +3,8 @@
 <html xmlns="http://www.w3.org/1999/xhtml"
       xmlns:ui="jakarta.faces.facelets"
       xmlns:h="jakarta.faces.html"
-      xmlns:f="jakarta.faces.core">
+      xmlns:f="jakarta.faces.core"
+      xmlns:a="jakarta.faces.passthrough">
 
     <ui:remove>
     <!--
@@ -26,6 +27,7 @@
 
     <f:metadata>
         <f:viewParam name="id" value="#{workerBean.id}"/>
+        <f:viewParam name="id" value="#{workerValidationBean.id}"/>
         <ui:param name="isReadOnly" value="#{adminWebBean.readOnlyWorkers.contains(workerBean.id)}"/>
     </f:metadata>
    
@@ -104,6 +106,60 @@
 
                         <h:link class="linkPositive" value="#{text['Add...']}" outcome="worker-configuration-add"><f:param name="id" value="#{workerBean.worker.id}"/></h:link>
                         <h:commandButton class="buttonNegative" value="#{text['Remove_Selected...']}" action="#{workerBean.bulkActionProperties('worker-configuration-remove')}"/>
+                        </h:form>
+
+                        <h2 id="validate"><h:outputText value="#{text['Validate_Configuration']}"/></h2>
+                        <h:form id="validateForm">
+                            <p>
+                                <h:outputLabel for="cli" value="#{text['Validate_Cli_Label']}"/><br/>
+                                <h:inputTextarea id="cli" value="#{workerValidationBean.cli}" cols="100" rows="2"
+                                                 a:placeholder="signclient signdocument -workername #{workerBean.worker.name} -infile document.txt -outfile signed.p7s"/>
+                            </p>
+                            <p>
+                                <h:commandButton id="validateButton" class="buttonPositive" value="#{text['Validate']}" action="#{workerValidationBean.validate}"/>
+                            </p>
+
+                            <h:panelGroup rendered="#{not empty workerValidationBean.error}">
+                                <p class="errorMessage"><h:outputText value="#{workerValidationBean.error}"/></p>
+                            </h:panelGroup>
+
+                            <h:panelGroup id="validationResult" rendered="#{workerValidationBean.validated}">
+                                <p>
+                                    <h:outputText class="successMessage" rendered="#{workerValidationBean.passed}" value="#{text['Validation_Passed']}"/>
+                                    <h:outputText class="errorMessage" rendered="#{!workerValidationBean.passed}" value="#{text['Validation_Failed']}"/>
+                                    <h:outputText value=" (#{workerValidationBean.summary})"/>
+                                </p>
+                                <h:dataTable value="#{workerValidationBean.rows}" var="row" rendered="#{not empty workerValidationBean.rows}"
+                                             class="dss1" headerClass="dss1" columnClasses="dss1,dss1,dss1,dss1,dss1" rowClasses="dss1,dss1_odd">
+                                    <h:column>
+                                        <f:facet name="header"><h:outputText value="#{text['Validation_Severity']}"/></f:facet>
+                                        <h:outputText class="#{row.styleClass}" value="#{row.severity}"/>
+                                    </h:column>
+                                    <h:column>
+                                        <f:facet name="header"><h:outputText value="#{text['Validation_Section']}"/></f:facet>
+                                        <h:outputText value="#{row.section}"/>
+                                    </h:column>
+                                    <h:column>
+                                        <f:facet name="header"><h:outputText value="#{text['Property']}"/></f:facet>
+                                        <h:outputText value="#{row.target}"/>
+                                    </h:column>
+                                    <h:column>
+                                        <f:facet name="header"><h:outputText value="#{text['Validation_Finding']}"/></f:facet>
+                                        <h:outputText value="#{row.message}"/>
+                                        <h:panelGroup rendered="#{not empty row.suggestion}">
+                                            <br/><i><h:outputText value="#{row.suggestion}"/></i>
+                                        </h:panelGroup>
+                                    </h:column>
+                                    <h:column>
+                                        <f:facet name="header"><h:outputText value="#{text['Validation_Code']}"/></f:facet>
+                                        <h:outputText value="#{row.code}"/>
+                                    </h:column>
+                                </h:dataTable>
+                                <details>
+                                    <summary><h:outputText value="#{text['Validation_Json']}"/></summary>
+                                    <pre><h:outputText value="#{workerValidationBean.reportJson}"/></pre>
+                                </details>
+                            </h:panelGroup>
                         </h:form>
                     </div>
                 </h:panelGroup>

@@ -203,14 +203,19 @@ tests:
 
 `CODE:X` matches a finding with that code whose property or option is X.
 
-## Where this is going
+## Where it runs
 
-- **v1 (now):** standalone `bin/signserver-validator` next to WildFly, using
-  REST or a properties file.
-- **Admin Web:** a "Validate" button under the properties table in
-  `worker-configuration.xhtml`, calling `SignServerValidator` from
-  `AdminWebSessionBean` with the local worker session (no REST). The core
-  module has no server dependencies, so it can be embedded as is.
-- **As a worker:** a `ValidatorWorker` (JSON in, JSON out) built with the
-  same core. It exposes other workers' configuration, so restrict its
-  `AUTHTYPE` to administrators.
+- **Standalone:** `bin/signserver-validator` next to WildFly, using REST or a
+  properties file.
+- **Admin Web:** *Workers > (worker) > Configuration* has a **Validate
+  configuration** section under the properties table. It validates the
+  worker, and optionally a signclient command you type, through the local
+  worker session (no REST needed). It shows the findings and the JSON report.
+  It needs the same administrator rights as viewing the configuration.
+  Values of properties masked at deploy time are never passed to the
+  validator. The Admin Web uses the catalog embedded in the jar, unless the
+  WildFly system property `signserver.validator.rules` names a catalog
+  directory (so rules can change without redeploying).
+- **As a worker (not built yet):** a `ValidatorWorker` (JSON in, JSON out)
+  built with the same core. It exposes other workers' configuration, so
+  restrict its `AUTHTYPE` to administrators.

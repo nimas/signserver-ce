@@ -105,6 +105,8 @@ import org.signserver.server.data.impl.UploadConfig;
 import org.signserver.server.log.AdminInfo;
 import org.signserver.validationservice.common.ValidateRequest;
 import org.signserver.validationservice.common.ValidateResponse;
+import org.signserver.validator.catalog.CatalogException;
+import org.signserver.validator.report.ValidationReport;
 
 /**
  * Facade for EJB calls from the admin web.
@@ -144,6 +146,24 @@ public class AdminWebSessionBean {
         AdminInfo adminInfo = auth.requireAdminAuthorization(principal, "getCurrentWorkerConfig",
                 String.valueOf(workerId));
         return worker.getCurrentWorkerConfig(adminInfo, workerId);
+    }
+
+    /**
+     * Validates a worker configuration, and optionally a signclient command
+     * against it, with the SignServer Validator rule catalog.
+     *
+     * @param principal the administrator
+     * @param workerId worker to validate
+     * @param cli signclient command line, or null/blank for the configuration only
+     * @return the validation report
+     * @throws AdminNotAuthorizedException if not an administrator
+     * @throws CatalogException if the rule catalog can not be loaded
+     */
+    public ValidationReport validateWorker(final AdminPrincipal principal, final int workerId,
+            final String cli) throws AdminNotAuthorizedException, CatalogException {
+        final AdminInfo adminInfo = auth.requireAdminAuthorization(principal, "validateWorker",
+                String.valueOf(workerId));
+        return WorkerValidation.validate(worker, adminInfo, workerId, cli);
     }
 
     public Properties getProperties(final AdminPrincipal principal,
